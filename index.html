@@ -121,7 +121,6 @@
     <div id="mappingModal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 items-center justify-center z-50 p-2"><div class="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] flex flex-col"><div class="bg-indigo-600 px-4 py-3 flex justify-between"><h2 class="text-white font-bold">⚙️ 제품 매핑</h2><button onclick="closeMappingModal()" class="text-white">✕</button></div><div class="flex-1 overflow-y-auto p-4"><div id="mappingBody" class="space-y-2"></div><button onclick="addMapping()" class="mt-3 w-full bg-indigo-100 text-indigo-700 font-bold py-2 rounded border">➕ 추가</button></div><div class="bg-gray-50 px-4 py-3 flex gap-2"><button onclick="closeMappingModal()" class="flex-1 bg-gray-200 py-2 rounded font-bold">취소</button><button onclick="saveMappings()" class="flex-1 bg-indigo-600 text-white py-2 rounded font-bold">저장</button></div></div></div>
 
     <script>
-        // 파이어베이스 주소 유지
         const FIREBASE_URL = "https://ts3pl-982ef-default-rtdb.firebaseio.com/counton_data.json"; 
 
         const ADMIN_PASSWORD = "4656";
@@ -131,6 +130,33 @@
         function confirmPassword() { if(document.getElementById('pwInput').value === ADMIN_PASSWORD) { closePwModal(); setTimeout(() => { if(pendingActionName === 'clearHistory') clearHistory(); }, 50); } else { document.getElementById('pwError').style.display = 'block'; } }
         function closePwModal() { document.getElementById('pwModal').style.display = 'none'; pendingActionName = null; }
         function getFormattedDate(d = new Date()) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+        // 💡 대시보드와 동일한 방식의 보관료 이월 엔진 삽입
+        function buildDailyStorage(month, dataObj) {
+            if (!dataObj) return {};
+            const series = {};
+            const [year, mon] = month.split('-').map(Number);
+            const today = new Date();
+            const todayMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+            const lastDayOfMonth = new Date(year, mon, 0).getDate();
+
+            let endDay;
+            if (month > todayMonthStr) endDay = 0;
+            else if (month === todayMonthStr) endDay = today.getDate();
+            else endDay = lastDayOfMonth;
+
+            const monthStart = `${month}-01`;
+            let lastVal = null;
+            const priorDates = Object.keys(dataObj).filter(d => d < monthStart).sort();
+            if (priorDates.length) lastVal = dataObj[priorDates[priorDates.length - 1]];
+
+            for (let day = 1; day <= endDay; day++) {
+                const dStr = `${month}-${String(day).padStart(2,'0')}`;
+                if (dataObj[dStr] !== undefined && dataObj[dStr] !== null) lastVal = dataObj[dStr];
+                if (lastVal !== null) series[dStr] = lastVal;
+            }
+            return series;
+        }
 
         const defaultData = [
             { id: "cellophane", name: "셀로판", box: 41, pcs: 0, perBox: 0, pltStd: 45 },
@@ -146,7 +172,8 @@
             document.getElementById('workDate').value = getFormattedDate();
             document.getElementById('excelDate').value = getFormattedDate();
 
-            fetch(FIREBASE_URL)
+            // [캐시 방지 코드 탑재]
+            fetch(FIREBASE_URL + "?t=" + new Date().getTime())
                 .then(res => res.json())
                 .then(data => {
                     if (data) {
@@ -200,7 +227,26 @@
 
         function handleMonthChange() { currentSelectedMonth = document.getElementById('monthSelector').value; document.getElementById('searchDate').value = ''; render(); }
         
-        function openStorageModal() { const [year, month] = currentSelectedMonth.split('-'); document.getElementById('storageModalTitle').innerText = `📊 ${year}년 ${parseInt(month)}월 보관비`; const tbody = document.getElementById('storageModalBody'); tbody.innerHTML = ''; const sortedDates = Object.keys(dailyPltLog).filter(date => date.startsWith(currentSelectedMonth)).sort(); if (sortedDates.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-500">데이터 없음</td></tr>`; } else { tbody.innerHTML = sortedDates.map(date => { const plt = dailyPltLog[date] || 0; const fee = plt * 700; return `<tr class="border-b"><td class="p-2">${date}</td><td class="p-2 text-center font-bold">${plt} PLT</td><td class="p-2 text-right font-bold text-indigo-600">${fee.toLocaleString()} 원</td></tr>`; }).join(''); } document.getElementById('storageModal').style.display = 'flex'; }
+        function openStorageModal() { 
+            const [year, month] = currentSelectedMonth.split('-'); 
+            document.getElementById('storageModalTitle').innerText = `📊 ${year}년 ${parseInt(month)}월 보관비`; 
+            const tbody = document.getElementById('storageModalBody'); 
+            
+            // 이월 엔진 적용 결과물 사용
+            const dailyStorage = buildDailyStorage(currentSelectedMonth, dailyPltLog);
+            const sortedDates = Object.keys(dailyStorage).sort(); 
+            
+            if (sortedDates.length === 0) { 
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-500">데이터 없음</td></tr>`; 
+            } else { 
+                tbody.innerHTML = sortedDates.map(date => { 
+                    const plt = dailyStorage[date] || 0; 
+                    const fee = plt * 700; 
+                    return `<tr class="border-b"><td class="p-2">${date}</td><td class="p-2 text-center font-bold">${plt} PLT</td><td class="p-2 text-right font-bold text-indigo-600">${fee.toLocaleString()} 원</td></tr>`; 
+                }).join(''); 
+            } 
+            document.getElementById('storageModal').style.display = 'flex'; 
+        }
         function closeStorageModal() { document.getElementById('storageModal').style.display = 'none'; }
         
         function openInOutModal(type) { 
@@ -269,7 +315,6 @@
                 item.pcs = ((total % item.perBox) + item.perBox) % item.perBox; 
             } 
             
-            // [수정 핵심] 대시보드가 완벽히 인식하도록 DB 저장 시 무조건 'IN' 또는 'OUT' 두 가지로 통일
             const dbType = type.startsWith('IN') ? 'IN' : 'OUT';
             logs.unshift({ itemId: id, type: dbType, originalType: type, plt: pltQty, box: boxQty, pcs: pcsQty, fee: Number(fee), text: logText, memo: memoText, time: timeStr }); 
             
@@ -293,7 +338,6 @@
         function updateDateDisplay() { const v=document.getElementById('excelDate').value; document.getElementById('excelDateDisplay').innerText=v ? `${v} 기준` : ''; }
         
         function matchProduct(t) { 
-            // [사용자 맞춤 설정] 세트와 설패키지 동일 취급
             let searchTarget = String(t).replace(/설패키지/g, '세트');
             const sorted = [...productMap].sort((a,b)=>(b.keyword||'').length-(a.keyword||'').length); 
             for(const m of sorted){ 
@@ -327,8 +371,12 @@
             document.getElementById('logTitleMonth').innerText = currentSelectedMonth.replace('-', '.');
 
             let mInFee = 0, mOutFee = 0, mStorageFee = 0;
+            
+            // 이월 엔진 적용
+            const dailyStorage = buildDailyStorage(currentSelectedMonth, dailyPltLog);
+            Object.keys(dailyStorage).forEach(d => { mStorageFee += dailyStorage[d] * 700; });
+
             logs.forEach(log => { if (log.time.startsWith(currentSelectedMonth)) { if (log.type.startsWith('IN')) mInFee += (log.fee||0); if (log.type === 'OUT') mOutFee += (log.fee||0); }});
-            Object.keys(dailyPltLog).forEach(dateKey => { if (dateKey.startsWith(currentSelectedMonth)) mStorageFee += (dailyPltLog[dateKey]||0) * 700; });
             
             document.getElementById('monthlyStorageFee').innerText = mStorageFee.toLocaleString(); document.getElementById('monthlyInFee').innerText = mInFee.toLocaleString(); document.getElementById('monthlyOutFee').innerText = mOutFee.toLocaleString(); document.getElementById('monthlyTotalRevenue').innerText = (mInFee + mOutFee + mStorageFee).toLocaleString();
             document.getElementById('itemSelect').innerHTML = inventory.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
