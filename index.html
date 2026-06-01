@@ -69,7 +69,7 @@
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <div class="flex-1">
                         <h3 class="text-sm font-bold text-emerald-800 flex items-center gap-1.5">📊 송장 Excel 일괄 출고</h3>
-                        <p class="text-[11px] text-emerald-700 mt-0.5 leading-snug">📋 <b>고정 컬럼:</b> A=송장 / M=받는분 / P=주소 / S·U·W·Y=제품명 / T·V·X·Z=수량</p>
+                        <p class="text-[11px] text-emerald-700 mt-0.5 leading-snug">📋 <b>인식 컬럼:</b> 운송장번호, 받는분, 받는분 주소, 품목명, 수량 (헤더 자동 인식)</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="document.getElementById('excelFile').click()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-md text-sm transition">📂 엑셀 업로드</button>
@@ -500,8 +500,98 @@
         function cancelTransaction(index) { const log = logs[index]; const item = inventory.find(i => i.id === log.itemId); if(!confirm('취소하시겠습니까?')) return; const appliedBoxes = log.box + ((log.plt || 0) * item.pltStd); if (log.type.startsWith('IN')) { item.box -= appliedBoxes; item.pcs -= log.pcs; } else { item.box += appliedBoxes; item.pcs += log.pcs; } if (item.perBox > 0) { let total = (item.box * item.perBox) + item.pcs; item.box = Math.floor(total / item.perBox); item.pcs = ((total % item.perBox) + item.perBox) % item.perBox; } logs.splice(index, 1); recalcDailyPlt(getFormattedDate()); saveData(); }
         function clearHistory() { logs = []; dailyPltLog = {}; manualStorageLog = {}; recalcDailyPlt(getFormattedDate()); saveData(); alert('데이터가 초기화되었습니다.'); }
 
-        function handleExcelUpload(event) { const file = event.target.files[0]; if(!file)return; const reader = new FileReader(); reader.onload = (e) => { const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'}); const sheet = workbook.Sheets[workbook.SheetNames[0]]; parseExcelRows(XLSX.utils.sheet_to_json(sheet, {header:1, defval:''})); }; reader.readAsArrayBuffer(file); event.target.value=''; }
-        function parseExcelRows(rows) { const PRODUCT_PAIRS = [{p:18,q:19,l:'S/T'},{p:20,q:21,l:'U/V'},{p:22,q:23,l:'W/X'},{p:24,q:25,l:'Y/Z'}]; pendingBatchOrders=[]; let startRow=0; for(let i=0;i<Math.min(rows.length,5);i++){if(rows[i].join('').includes('송장')) startRow=i+1;} for(let i=startRow; i<rows.length; i++) { const row = rows[i]; if(!row||!row.some(c=>c))continue; const invoice=row[0]||''; const name=row[12]||''; const address=row[15]||''; let found=false; PRODUCT_PAIRS.forEach(pair=>{ const pt=row[pair.p]; const q=parseInt(row[pair.q]); if(!pt||!q)return; found=true; const base=matchProduct(String(pt)); let matched=null; if(base){ matched={itemId:base.itemId,plt:(base.plt||0)*q,box:(base.box||0)*q,pcs:(base.pcs||0)*q}; } pendingBatchOrders.push({invoice,name,address,productText:pt,qty:q,slotLabel:pair.l,matched,selected:!!matched}); }); if(!found && (invoice||name)) pendingBatchOrders.push({invoice,name,address,productText:'-',qty:0,slotLabel:'-',matched:null,selected:false}); } if(pendingBatchOrders.length===0){alert('인식 가능한 데이터가 없습니다.');return;} renderExcelPreview(); updateDateDisplay(); document.getElementById('excelModal').style.display='flex'; }
+        function handleExcelUpload(event) { 
+            const file = event.target.files[0]; 
+            if(!file)return; 
+            const reader = new FileReader(); 
+            reader.onload = (e) => { 
+                const data = new Uint8Array(e.target.result); 
+                const workbook = XLSX.read(data, {type: 'array'}); 
+                const sheet = workbook.Sheets[workbook.SheetNames[0]]; 
+                parseExcelRows(XLSX.utils.sheet_to_json(sheet, {header:1, defval:''})); 
+            }; 
+            reader.readAsArrayBuffer(file); 
+            event.target.value=''; 
+        }
+        
+        function parseExcelRows(rows) {
+            pendingBatchOrders = [];
+            let headerRowIdx = -1;
+
+            // 1. 헤더 행(제목 줄) 자동으로 찾기
+            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                if (rows[i] && rows[i].join('').includes('운송장번호')) {
+                    headerRowIdx = i;
+                    break;
+                }
+            }
+
+            if (headerRowIdx === -1) {
+                alert('엑셀 파일에서 "운송장번호" 열을 찾을 수 없습니다. 양식을 확인해주세요.');
+                return;
+            }
+
+            // 2. 피킹리스트 양식에 맞춘 열(Column) 인덱스 매핑
+            const headers = rows[headerRowIdx];
+            const colIdx = {
+                invoice: headers.findIndex(h => h && String(h).includes('운송장번호')),
+                name: headers.findIndex(h => h && String(h).includes('받는분') && !String(h).includes('주소') && !String(h).includes('번호')),
+                address: headers.findIndex(h => h && String(h).includes('받는분 주소')),
+                product: headers.findIndex(h => h && String(h).includes('품목명')),
+                qty: headers.findIndex(h => h && String(h).includes('수량'))
+            };
+
+            // 3. 데이터 추출 및 매핑 처리
+            for (let i = headerRowIdx + 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || !row.some(c => c)) continue;
+
+                const invoice = colIdx.invoice !== -1 ? row[colIdx.invoice] || '' : '';
+                const name = colIdx.name !== -1 ? row[colIdx.name] || '' : '';
+                const address = colIdx.address !== -1 ? row[colIdx.address] || '' : '';
+                const productText = colIdx.product !== -1 ? row[colIdx.product] || '' : '';
+                
+                // 수량이 빈칸이거나 문자인 경우 기본값 1로 처리
+                let qty = colIdx.qty !== -1 ? parseInt(row[colIdx.qty]) : 1;
+                if (isNaN(qty) || qty <= 0) qty = 1;
+
+                // 데이터가 없는 빈 빈 줄은 건너뛰기
+                if (!invoice && !name && !productText) continue;
+
+                const base = matchProduct(String(productText));
+                let matched = null;
+                
+                if (base) {
+                    matched = {
+                        itemId: base.itemId,
+                        plt: (base.plt || 0) * qty,
+                        box: (base.box || 0) * qty,
+                        pcs: (base.pcs || 0) * qty
+                    };
+                }
+
+                pendingBatchOrders.push({
+                    invoice: invoice,
+                    name: name,
+                    address: address,
+                    productText: productText,
+                    qty: qty,
+                    slotLabel: '-', // 단일 품목 처리로 고정
+                    matched: matched,
+                    selected: !!matched
+                });
+            }
+
+            if (pendingBatchOrders.length === 0) {
+                alert('인식 가능한 데이터가 없습니다.');
+                return;
+            }
+            
+            renderExcelPreview();
+            updateDateDisplay();
+            document.getElementById('excelModal').style.display = 'flex';
+        }
+
         function setExcelDate(offset) { const d=new Date(); d.setDate(d.getDate()+offset); document.getElementById('excelDate').value=getFormattedDate(d); updateDateDisplay(); }
         function updateDateDisplay() { const v=document.getElementById('excelDate').value; document.getElementById('excelDateDisplay').innerText=v ? `${v} 기준` : ''; }
         
