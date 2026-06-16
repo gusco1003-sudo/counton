@@ -459,14 +459,18 @@
             
             if (type.startsWith('IN')) { 
                 fee += (type === 'IN_40FT' ? pltQty * 10000 : pltQty * 5000); 
-                if (['cellophane','ezp'].includes(id)) fee += (boxQty * 500); 
+                // 품목명에 셀로판이나 EZ가 들어가면 입고비 부과
+                if (['cellophane','ezp'].includes(id) || item.name.includes('셀로판') || item.name.toUpperCase().includes('EZ')) {
+                    fee += (boxQty * 500); 
+                }
                 const prefix = type === 'IN_40FT' ? '[40FT입고]' : '[입고]';
                 logText = `${prefix} ${item.name} ➕ ${pltQty}PLT / ${boxQty}박스 / ${pcsQty}개`; 
                 item.box += appliedBoxes; 
                 item.pcs += pcsQty; 
             } else { 
                 fee = pltQty * 5000; 
-                if (['cellophane','ezp','roll100','roll80'].includes(id)) { 
+                // 품목명에 셀로판, 롤, EZ가 들어가면 출고비 부과
+                if (['cellophane','ezp','roll100','roll80'].includes(id) || item.name.includes('셀로판') || item.name.includes('롤') || item.name.toUpperCase().includes('EZ')) { 
                     fee += boxQty * 5000; 
                     if (pcsQty === 1) fee += 3000; 
                     else if (pcsQty >= 2) fee += 5000; 
@@ -518,7 +522,6 @@
             pendingBatchOrders = [];
             let headerRowIdx = -1;
 
-            // 1. 헤더 행(제목 줄) 자동으로 찾기
             for (let i = 0; i < Math.min(rows.length, 10); i++) {
                 if (rows[i] && rows[i].join('').includes('운송장번호')) {
                     headerRowIdx = i;
@@ -531,7 +534,6 @@
                 return;
             }
 
-            // 2. 피킹리스트 양식에 맞춘 열(Column) 인덱스 매핑
             const headers = rows[headerRowIdx];
             const colIdx = {
                 invoice: headers.findIndex(h => h && String(h).includes('운송장번호')),
@@ -541,7 +543,6 @@
                 qty: headers.findIndex(h => h && String(h).includes('수량'))
             };
 
-            // 3. 데이터 추출 및 매핑 처리
             for (let i = headerRowIdx + 1; i < rows.length; i++) {
                 const row = rows[i];
                 if (!row || !row.some(c => c)) continue;
@@ -551,11 +552,9 @@
                 const address = colIdx.address !== -1 ? row[colIdx.address] || '' : '';
                 const productText = colIdx.product !== -1 ? row[colIdx.product] || '' : '';
                 
-                // 수량이 빈칸이거나 문자인 경우 기본값 1로 처리
                 let qty = colIdx.qty !== -1 ? parseInt(row[colIdx.qty]) : 1;
                 if (isNaN(qty) || qty <= 0) qty = 1;
 
-                // 데이터가 없는 빈 빈 줄은 건너뛰기
                 if (!invoice && !name && !productText) continue;
 
                 const base = matchProduct(String(productText));
@@ -576,7 +575,7 @@
                     address: address,
                     productText: productText,
                     qty: qty,
-                    slotLabel: '-', // 단일 품목 처리로 고정
+                    slotLabel: '-', 
                     matched: matched,
                     selected: !!matched
                 });
@@ -608,6 +607,7 @@
         function renderExcelPreview() { document.getElementById('excelPreviewBody').innerHTML = pendingBatchOrders.map((o,i)=>{ const rowClass = o.matched ? 'bg-white' : 'bg-red-50'; return `<tr class="${rowClass}"><td class="p-2"><input type="checkbox" ${o.selected?'checked':''} ${!o.matched?'disabled':''} onchange="pendingBatchOrders[${i}].selected=this.checked" class="w-4 h-4 cursor-pointer"></td><td class="p-2 font-mono text-xs">${o.invoice}</td><td class="p-2 font-bold text-gray-700">${o.name}</td><td class="p-2 text-xs">${o.productText} <span class="font-bold text-blue-600">(${o.qty}개)</span></td><td class="p-2">${o.matched ? '<span class="text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded">성공</span>':'<span class="text-red-500 font-bold">실패</span>'}</td></tr>`; }).join(''); }
         function toggleSelectAll() { const a=pendingBatchOrders.some(o=>o.selected); pendingBatchOrders.forEach(o=>{if(o.matched)o.selected=!a}); renderExcelPreview(); }
         function closeExcelModal() { document.getElementById('excelModal').style.display='none'; }
+        
         function processBatchOrders() { 
             const sel=pendingBatchOrders.filter(o=>o.selected&&o.matched); 
             if(sel.length===0)return; 
@@ -621,7 +621,8 @@
                 const appBox=box+(plt*item.pltStd); 
                 
                 let fee=plt*5000; 
-                if(['cellophane','ezp','roll100','roll80'].includes(item.id)){
+                // 엑셀 일괄 처리 시 품목명을 확인하여 택배비 자동 합산
+                if(['cellophane','ezp','roll100','roll80'].includes(item.id) || item.name.includes('셀로판') || item.name.includes('롤') || item.name.toUpperCase().includes('EZ')){
                     fee+=box*5000; 
                     if(pcs===1)fee+=3000; 
                     else if(pcs>=2)fee+=5000;
