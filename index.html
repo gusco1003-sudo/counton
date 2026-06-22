@@ -604,11 +604,20 @@
         function setExcelDate(offset) { const d=new Date(); d.setDate(d.getDate()+offset); document.getElementById('excelDate').value=getFormattedDate(d); updateDateDisplay(); }
         function updateDateDisplay() { const v=document.getElementById('excelDate').value; document.getElementById('excelDateDisplay').innerText=v ? `${v} 기준` : ''; }
         
+        // 🔧 공백 정규화: 엑셀에서 섞여 들어오는 비분리 공백(\u00a0) 등 특수 공백을
+        //    일반 공백으로 바꾸고 연속 공백을 하나로 합쳐 매칭 누락을 방지한다.
+        function normalizeText(s) {
+            return String(s == null ? '' : s)
+                .replace(/[\u00a0\u1680\u2000-\u200b\u202f\u205f\u3000\ufeff]/g, ' ') // 각종 특수 공백 → 일반 공백
+                .replace(/\s+/g, ' ') // 연속 공백 합치기
+                .trim();
+        }
+
         function matchProduct(t) { 
-            let searchTarget = String(t).replace(/설패키지/g, '세트');
+            let searchTarget = normalizeText(String(t).replace(/설패키지/g, '세트'));
             const sorted = [...productMap].sort((a,b)=>(b.keyword||'').length-(a.keyword||'').length); 
             for(const m of sorted){ 
-                let keyword = (m.keyword||'').replace(/설패키지/g, '세트');
+                let keyword = normalizeText((m.keyword||'').replace(/설패키지/g, '세트'));
                 if(keyword && searchTarget.includes(keyword)) return m; 
             } 
             return null; 
