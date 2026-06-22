@@ -208,7 +208,10 @@
             { id: "cellophane", name: "셀로판", box: 41, pcs: 0, perBox: 0, pltStd: 45 },
             { id: "ezp", name: "EZ-P", box: 23, pcs: 0, perBox: 0, pltStd: 45 },
             { id: "roll100", name: "100롤", box: 554, pcs: 4, perBox: 5, pltStd: 40 },
-            { id: "roll80", name: "80롤", box: 386, pcs: 1, perBox: 5, pltStd: 40 }
+            { id: "roll80", name: "80롤", box: 386, pcs: 1, perBox: 5, pltStd: 40 },
+            { id: "scissor_orange", name: "가위 오렌지", box: 0, pcs: 0, perBox: 0, pltStd: 40 },
+            { id: "scissor_red", name: "가위 레드", box: 0, pcs: 0, perBox: 0, pltStd: 40 },
+            { id: "cellophane_6roll_rev", name: "셀로판 6롤 역방향", box: 0, pcs: 0, perBox: 0, pltStd: 40 }
         ];
         const defaultMappings = [{ keyword: '16롤', itemId: 'roll80', plt: 0, box: 0, pcs: 1 }, { keyword: '20롤', itemId: 'roll100', plt: 0, box: 0, pcs: 1 }];
 
@@ -469,8 +472,15 @@
                 item.pcs += pcsQty; 
             } else { 
                 fee = pltQty * 5000; 
-                // 품목명에 셀로판, 롤, EZ가 들어가면 출고비 부과
-                if (['cellophane','ezp','roll100','roll80'].includes(id) || item.name.includes('셀로판') || item.name.includes('롤') || item.name.toUpperCase().includes('EZ')) { 
+                // 품목명에 따라 출고비(택배비) 자동 부과
+                if (item.name.includes('가위')) {
+                    // ✂️ 가위 오렌지/레드: 수량(박스+낱개) 5개 미만 2,500원 / 5개 이상 3,000원
+                    const scissorQty = boxQty + pcsQty;
+                    if (scissorQty > 0) fee += (scissorQty >= 5) ? 3000 : 2500;
+                } else if (item.name.includes('역방향')) {
+                    // 🧻 셀로판 6롤 역방향: 1박스당 5,000원
+                    fee += boxQty * 5000;
+                } else if (['cellophane','ezp','roll100','roll80'].includes(id) || item.name.includes('셀로판') || item.name.includes('롤') || item.name.toUpperCase().includes('EZ')) { 
                     fee += boxQty * 5000; 
                     if (pcsQty === 1) fee += 3000; 
                     else if (pcsQty >= 2) fee += 5000; 
@@ -614,6 +624,19 @@
             const inputDate=document.getElementById('excelDate').value; 
             const now=new Date(); 
             const tStr=`${inputDate} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`; 
+
+            // ✂️ [가위 택배비] 같은 송장끼리 가위(오렌지+레드) 수량을 합산해서 송장당 1번만 부과
+            //    - 합산 5개 미만: 2,500원 / 5개 이상: 3,000원
+            const scissorKeyOf = (o) => o.invoice ? ('INV_'+o.invoice) : ('ADDR_'+(o.name||'')+'_'+(o.address||''));
+            const scissorTotals = {}; // 송장키 -> 가위 합산 수량
+            sel.forEach(o=>{
+                const it = inventory.find(i=>i.id===o.matched.itemId);
+                if(it && it.name.includes('가위')){
+                    const k = scissorKeyOf(o);
+                    scissorTotals[k] = (scissorTotals[k]||0) + (o.matched.pcs||0) + (o.matched.box||0);
+                }
+            });
+            const scissorCharged = {}; // 송장당 가위 택배비 1회만 부과하기 위한 체크
             
             sel.forEach(o=>{ 
                 const item=inventory.find(i=>i.id===o.matched.itemId); 
@@ -622,7 +645,18 @@
                 
                 let fee=plt*5000; 
                 // 엑셀 일괄 처리 시 품목명을 확인하여 택배비 자동 합산
-                if(['cellophane','ezp','roll100','roll80'].includes(item.id) || item.name.includes('셀로판') || item.name.includes('롤') || item.name.toUpperCase().includes('EZ')){
+                if(item.name.includes('가위')){
+                    // ✂️ 가위 오렌지/레드: 송장 합산 수량 기준, 송장당 1번만 부과 (5개미만 2,500 / 5개이상 3,000)
+                    const k = scissorKeyOf(o);
+                    if(!scissorCharged[k]){
+                        const totalScissors = scissorTotals[k] || 0;
+                        fee += (totalScissors >= 5) ? 3000 : 2500;
+                        scissorCharged[k] = true;
+                    }
+                } else if(item.name.includes('역방향')){
+                    // 🧻 셀로판 6롤 역방향: 1박스당 5,000원
+                    fee += box*5000;
+                } else if(['cellophane','ezp','roll100','roll80'].includes(item.id) || item.name.includes('셀로판') || item.name.includes('롤') || item.name.toUpperCase().includes('EZ')){
                     fee+=box*5000; 
                     if(pcs===1)fee+=3000; 
                     else if(pcs>=2)fee+=5000;
