@@ -190,6 +190,38 @@
         </div>
     </div>
     
+    <div id="editLogModal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center z-50 p-3">
+        <div class="bg-white p-4 sm:p-6 rounded-xl w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h2 class="text-lg font-bold mb-3 border-b pb-2 flex items-center gap-2">✏️ 입출고 내역 수정</h2>
+            <input type="hidden" id="editLogIndex">
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">작업 일자</label><input type="date" id="editLogDate" class="w-full p-2 border border-gray-300 rounded-md font-semibold bg-yellow-50 outline-none"></div>
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">작업 구분</label>
+                        <select id="editLogType" class="w-full p-2 border border-gray-300 rounded-md font-bold text-center outline-none">
+                            <option value="OUT">📦 출고 (-)</option>
+                            <option value="IN">➕ 일반 입고 (+)</option>
+                            <option value="IN_40FT">🚢 40FT 입고 (+)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-2 rounded text-xs text-gray-500 border">품목: <b id="editLogItemName" class="text-gray-800"></b></div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div><label class="block text-xs font-bold text-purple-700 mb-1">파렛트</label><input type="number" id="editLogPlt" min="0" class="w-full p-2 border-2 border-purple-200 bg-purple-50 rounded-md text-center font-bold outline-none"></div>
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">박스</label><input type="number" id="editLogBox" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">낱개</label><input type="number" id="editLogPcs" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
+                </div>
+                <div><label class="block text-xs font-bold text-indigo-700 mb-1">💰 금액 (택배비/원)</label><input type="number" id="editLogFee" min="0" class="w-full p-2 border-2 border-indigo-200 bg-indigo-50 rounded-md text-center font-bold text-indigo-700 outline-none"></div>
+                <div><label class="block text-xs font-medium text-gray-700 mb-1">비고 (메모)</label><input type="text" id="editLogMemo" class="w-full p-2 border border-gray-300 rounded-md outline-none" placeholder="비고사항"></div>
+                <p class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 leading-snug">※ 수량을 변경하면 <b>현재고가 자동 재조정</b>됩니다. 금액은 입력한 값 그대로 저장됩니다.</p>
+            </div>
+            <div class="mt-4 flex justify-end gap-2 border-t pt-3">
+                <button onclick="closeEditLogModal()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm font-semibold">취소</button>
+                <button onclick="saveEditLog()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded text-sm font-bold shadow-sm">저장</button>
+            </div>
+        </div>
+    </div>
+
     <div id="excelModal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 items-center justify-center z-50 p-2"><div class="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] flex flex-col shadow-2xl"><div class="bg-emerald-600 px-4 py-3 flex justify-between items-center"><h2 class="text-white font-bold">📊 송장 출고 미리보기</h2><button onclick="closeExcelModal()" class="text-white text-xl">&times;</button></div><div class="bg-amber-50 px-4 py-3"><div class="flex flex-col gap-2"><div class="flex items-center gap-2"><label class="font-bold text-sm">📅 처리 일자</label><input type="date" id="excelDate" onchange="updateDateDisplay()" class="p-1.5 border rounded font-bold"><button onclick="setExcelDate(0)" class="text-xs bg-white border border-gray-300 px-2 py-1 rounded font-bold hover:bg-gray-50">📍 오늘</button><button onclick="setExcelDate(-1)" class="text-xs bg-white border border-gray-300 px-2 py-1 rounded font-bold hover:bg-gray-50">⬅️ 어제</button></div><div class="flex justify-between items-center"><p id="excelDateDisplay" class="text-xs font-semibold text-emerald-700"></p><button onclick="toggleSelectAll()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm">전체선택</button></div></div></div><div class="flex-1 overflow-y-auto p-2"><table class="w-full text-left text-sm hidden md:table"><thead class="bg-gray-100"><tr class="border-b"><th class="p-2">선택</th><th class="p-2">송장</th><th class="p-2">받는분</th><th class="p-2">원본(제품/수량)</th><th class="p-2 text-center">변환 결과</th></tr></thead><tbody id="excelPreviewBody" class="divide-y"></tbody></table><div id="excelPreviewCards" class="md:hidden space-y-2"></div></div><div class="bg-gray-50 border-t px-4 py-3 flex gap-2"><button onclick="closeExcelModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 py-2.5 rounded text-sm font-bold transition">취소</button><button onclick="processBatchOrders()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded text-sm font-bold shadow-md transition">✅ 일괄 처리 확정</button></div></div></div>
     
     <div id="mappingModal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 items-center justify-center z-50 p-2"><div class="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] flex flex-col shadow-2xl"><div class="bg-indigo-600 px-4 py-3 flex justify-between items-center"><h2 class="text-white font-bold">⚙️ 제품 엑셀 매핑 키워드 설정</h2><button onclick="closeMappingModal()" class="text-white text-xl">&times;</button></div><div class="flex-1 overflow-y-auto p-4"><div id="mappingBody" class="space-y-2"></div><button onclick="addMapping()" class="mt-3 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-lg border border-indigo-200 transition">➕ 새 키워드 추가</button></div><div class="bg-gray-50 px-4 py-3 flex gap-2 border-t"><button onclick="closeMappingModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 py-2.5 rounded font-bold transition">닫기</button><button onclick="saveMappings()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded font-bold shadow-md transition">저장</button></div></div></div>
@@ -211,9 +243,18 @@
             { id: "roll80", name: "80롤", box: 386, pcs: 1, perBox: 5, pltStd: 40 },
             { id: "scissor_orange", name: "가위 오렌지", box: 0, pcs: 0, perBox: 0, pltStd: 40 },
             { id: "scissor_red", name: "가위 레드", box: 0, pcs: 0, perBox: 0, pltStd: 40 },
-            { id: "cellophane_6roll_rev", name: "셀로판 6롤 역방향", box: 0, pcs: 0, perBox: 0, pltStd: 40 }
+            { id: "cellophane_6roll_rev", name: "셀로판 6롤 역방향", box: 0, pcs: 0, perBox: 0, pltStd: 40 },
+            { id: "thermal5740", name: "감열지5740", box: 0, pcs: 0, perBox: 0, pltStd: 40 },
+            { id: "thermal5750", name: "감열지5750", box: 0, pcs: 0, perBox: 0, pltStd: 40 },
+            { id: "ribbon_plastic", name: "플라스틱 지관리본", box: 0, pcs: 0, perBox: 0, pltStd: 40 }
         ];
-        const defaultMappings = [{ keyword: '16롤', itemId: 'roll80', plt: 0, box: 0, pcs: 1 }, { keyword: '20롤', itemId: 'roll100', plt: 0, box: 0, pcs: 1 }];
+        const defaultMappings = [
+            { keyword: '16롤', itemId: 'roll80', plt: 0, box: 0, pcs: 1, fee: 0 },
+            { keyword: '20롤', itemId: 'roll100', plt: 0, box: 0, pcs: 1, fee: 0 },
+            { keyword: '감열지5740', itemId: 'thermal5740', plt: 0, box: 0, pcs: 1, fee: 0 },
+            { keyword: '감열지5750', itemId: 'thermal5750', plt: 0, box: 0, pcs: 1, fee: 0 },
+            { keyword: '지관리본', itemId: 'ribbon_plastic', plt: 0, box: 1, pcs: 0, fee: 0 }
+        ];
 
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('workDate').value = getFormattedDate();
@@ -477,6 +518,13 @@
                     // ✂️ 가위 오렌지/레드: 수량(박스+낱개) 5개 미만 2,500원 / 5개 이상 3,000원
                     const scissorQty = boxQty + pcsQty;
                     if (scissorQty > 0) fee += (scissorQty >= 5) ? 3000 : 2500;
+                } else if (item.name.includes('감열지')) {
+                    // 🧾 감열지(5740/5750): 1~10개당 3,000원 (11개 이상은 10개 단위로 추가)
+                    const u = boxQty + pcsQty;
+                    if (u > 0) fee += Math.ceil(u / 10) * 3000;
+                } else if (item.name.replace(/\s/g,'').includes('지관리본')) {
+                    // 🎗️ 플라스틱 지관리본: 1박스당 5,000원
+                    fee += (boxQty + pcsQty) * 5000;
                 } else if (item.name.includes('역방향')) {
                     // 🧻 셀로판 6롤 역방향: 1박스당 5,000원
                     fee += boxQty * 5000;
@@ -513,6 +561,95 @@
 
         function cancelTransaction(index) { const log = logs[index]; const item = inventory.find(i => i.id === log.itemId); if(!confirm('취소하시겠습니까?')) return; const appliedBoxes = log.box + ((log.plt || 0) * item.pltStd); if (log.type.startsWith('IN')) { item.box -= appliedBoxes; item.pcs -= log.pcs; } else { item.box += appliedBoxes; item.pcs += log.pcs; } if (item.perBox > 0) { let total = (item.box * item.perBox) + item.pcs; item.box = Math.floor(total / item.perBox); item.pcs = ((total % item.perBox) + item.perBox) % item.perBox; } logs.splice(index, 1); recalcDailyPlt(getFormattedDate()); saveData(); }
         function clearHistory() { logs = []; dailyPltLog = {}; manualStorageLog = {}; recalcDailyPlt(getFormattedDate()); saveData(); alert('데이터가 초기화되었습니다.'); }
+
+        // 📅 특정 날짜만 필터링 (그룹 헤더 클릭 시)
+        function filterByDate(d) { const el = document.getElementById('searchDate'); el.value = (el.value === d) ? '' : d; render(); }
+
+        // 🔁 재고에 로그 효과 적용/되돌리기 (sign: +1 적용, -1 되돌리기)
+        function applyInventoryEffect(log, sign) {
+            const item = inventory.find(i => i.id === log.itemId);
+            if (!item) return;
+            const appliedBoxes = (Number(log.box)||0) + ((Number(log.plt)||0) * item.pltStd);
+            const dir = String(log.type).startsWith('IN') ? 1 : -1; // 입고는 +, 출고는 -
+            item.box += sign * dir * appliedBoxes;
+            item.pcs += sign * dir * (Number(log.pcs)||0);
+            if (item.perBox > 0) {
+                let total = (item.box * item.perBox) + item.pcs;
+                item.box = Math.floor(total / item.perBox);
+                item.pcs = ((total % item.perBox) + item.perBox) % item.perBox;
+            }
+        }
+
+        // ✏️ 입출고 내역 수정
+        let editingLogIndex = -1;
+        function openEditLogModal(index) {
+            const log = logs[index];
+            if (!log) return;
+            editingLogIndex = index;
+            const item = inventory.find(i => i.id === log.itemId);
+            document.getElementById('editLogIndex').value = index;
+            document.getElementById('editLogDate').value = (log.time||'').substring(0,10) || getFormattedDate();
+            document.getElementById('editLogType').value = log.originalType || log.type || 'OUT';
+            document.getElementById('editLogItemName').innerText = item ? item.name : '(삭제된 품목)';
+            document.getElementById('editLogPlt').value = Number(log.plt)||0;
+            document.getElementById('editLogBox').value = Number(log.box)||0;
+            document.getElementById('editLogPcs').value = Number(log.pcs)||0;
+            document.getElementById('editLogFee').value = Number(log.fee)||0;
+            document.getElementById('editLogMemo').value = log.memo || '';
+            document.getElementById('editLogModal').style.display = 'flex';
+        }
+        function closeEditLogModal() { document.getElementById('editLogModal').style.display = 'none'; editingLogIndex = -1; }
+
+        function saveEditLog() {
+            const index = editingLogIndex;
+            const log = logs[index];
+            if (!log) return closeEditLogModal();
+            const item = inventory.find(i => i.id === log.itemId);
+
+            // 1) 기존 재고 효과 되돌리기
+            if (item) applyInventoryEffect(log, -1);
+
+            // 2) 새 값 읽기
+            const newDate = document.getElementById('editLogDate').value || (log.time||'').substring(0,10);
+            const now = new Date();
+            const oldTimePart = (log.time||'').substring(11) || `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const newType = document.getElementById('editLogType').value;
+            const newPlt = parseInt(document.getElementById('editLogPlt').value)||0;
+            const newBox = parseInt(document.getElementById('editLogBox').value)||0;
+            const newPcs = parseInt(document.getElementById('editLogPcs').value)||0;
+            const newFee = parseInt(document.getElementById('editLogFee').value)||0;
+            const newMemo = document.getElementById('editLogMemo').value.trim();
+
+            // 3) 로그 갱신
+            log.time = `${newDate} ${oldTimePart}`;
+            log.originalType = newType;
+            log.type = newType.startsWith('IN') ? 'IN' : 'OUT';
+            log.plt = newPlt; log.box = newBox; log.pcs = newPcs;
+            log.fee = Number(newFee); log.memo = newMemo;
+
+            // 4) 표시 텍스트 재구성 (앞쪽 [태그]는 최대한 유지)
+            const tagMatch = String(log.text||'').match(/^\[[^\]]+\]/);
+            let tag = tagMatch ? tagMatch[0] : (log.type === 'IN' ? (newType === 'IN_40FT' ? '[40FT입고]' : '[입고]') : '[출고]');
+            // 구분이 바뀌었는데 태그가 안 맞으면 기본 태그로 교정
+            if (log.type === 'OUT' && tag.includes('입고')) tag = '[출고]';
+            if (log.type === 'IN' && tag.includes('출고')) tag = (newType === 'IN_40FT') ? '[40FT입고]' : '[입고]';
+            const nm = item ? item.name : '';
+            const parts = [];
+            if (newPlt>0) parts.push(newPlt+'PLT');
+            if (newBox>0) parts.push(newBox+'박스');
+            if (newPcs>0) parts.push(newPcs+'개');
+            log.text = `${tag} ${nm} ${parts.join(' / ')}`.replace(/\s+/g,' ').trim();
+
+            // 5) 새 재고 효과 적용
+            if (item) applyInventoryEffect(log, +1);
+
+            recalcDailyPlt(newDate);
+            currentSelectedMonth = newDate.substring(0,7);
+            document.getElementById('searchDate').value = '';
+            closeEditLogModal();
+            saveData();
+            alert('내역이 수정되었습니다.');
+        }
 
         function handleExcelUpload(event) { 
             const file = event.target.files[0]; 
@@ -575,7 +712,8 @@
                         itemId: base.itemId,
                         plt: (base.plt || 0) * qty,
                         box: (base.box || 0) * qty,
-                        pcs: (base.pcs || 0) * qty
+                        pcs: (base.pcs || 0) * qty,
+                        fee: Number(base.fee) || 0
                     };
                 }
 
@@ -653,8 +791,13 @@
                 const appBox=box+(plt*item.pltStd); 
                 
                 let fee=plt*5000; 
+                const customFee = Number(o.matched.fee) || 0;   // 매핑에서 지정한 고정 택배비
+                const lineUnits = (Number(box)||0) + (Number(pcs)||0); // 감열지 등 개수 기준 합산용
                 // 엑셀 일괄 처리 시 품목명을 확인하여 택배비 자동 합산
-                if(item.name.includes('가위')){
+                if(customFee > 0){
+                    // 💰 매핑에 금액이 지정된 경우: 해당 금액을 택배비로 고정 적용 (송장 1건당 1회)
+                    fee += customFee;
+                } else if(item.name.includes('가위')){
                     // ✂️ 가위 오렌지/레드: 송장 합산 수량 기준, 송장당 1번만 부과 (5개미만 2,500 / 5개이상 3,000)
                     const k = scissorKeyOf(o);
                     if(!scissorCharged[k]){
@@ -662,6 +805,12 @@
                         fee += (totalScissors >= 5) ? 3000 : 2500;
                         scissorCharged[k] = true;
                     }
+                } else if(item.name.includes('감열지')){
+                    // 🧾 감열지(5740/5750): 1~10개당 3,000원 (11개 이상은 10개 단위로 추가)
+                    if(lineUnits > 0) fee += Math.ceil(lineUnits/10) * 3000;
+                } else if(item.name.replace(/\s/g,'').includes('지관리본')){
+                    // 🎗️ 플라스틱 지관리본: 1박스당 5,000원
+                    fee += lineUnits * 5000;
                 } else if(item.name.includes('역방향')){
                     // 🧻 셀로판 6롤 역방향: 1박스당 5,000원
                     fee += box*5000;
@@ -696,9 +845,23 @@
             alert(sel.length+'건 일괄 출고가 완료되었습니다.'); 
         }
 
-        function openMappingModal() { document.getElementById('mappingBody').innerHTML = productMap.map((m,i)=>`<div class="flex gap-2 mb-2 items-center bg-gray-50 p-2 rounded border"><input type="text" value="${m.keyword}" oninput="productMap[${i}].keyword=this.value" class="border border-gray-300 p-2 w-1/3 rounded font-bold outline-none focus:border-indigo-500" placeholder="엑셀 텍스트"><select onchange="productMap[${i}].itemId=this.value" class="border border-gray-300 p-2 w-1/3 rounded font-bold outline-none focus:border-indigo-500">${inventory.map(inv=>`<option value="${inv.id}" ${inv.id===m.itemId?'selected':''}>${inv.name}</option>`).join('')}</select><div class="flex gap-1 w-1/3"><input type="number" value="${m.plt}" oninput="productMap[${i}].plt=this.value" class="border border-gray-300 p-2 w-full rounded text-center" placeholder="PLT"><input type="number" value="${m.box}" oninput="productMap[${i}].box=this.value" class="border border-gray-300 p-2 w-full rounded text-center" placeholder="BOX"><input type="number" value="${m.pcs}" oninput="productMap[${i}].pcs=this.value" class="border border-gray-300 p-2 w-full rounded text-center" placeholder="낱개"></div><button onclick="removeMapping(${i})" class="bg-red-100 text-red-600 font-bold px-3 py-2 rounded hover:bg-red-200 transition">X</button></div>`).join(''); document.getElementById('mappingModal').style.display='flex'; }
+        function openMappingModal() { document.getElementById('mappingBody').innerHTML = productMap.map((m,i)=>`
+            <div class="bg-gray-50 p-3 rounded-lg border space-y-2">
+                <div class="flex gap-2 items-center">
+                    <input type="text" value="${m.keyword||''}" oninput="productMap[${i}].keyword=this.value" class="border border-gray-300 p-2 flex-1 rounded font-bold outline-none focus:border-indigo-500" placeholder="엑셀 인식 텍스트 (예: 감열지5740)">
+                    <button onclick="removeMapping(${i})" class="bg-red-100 text-red-600 font-bold px-3 py-2 rounded hover:bg-red-200 transition shrink-0">X</button>
+                </div>
+                <select onchange="productMap[${i}].itemId=this.value" class="border border-gray-300 p-2 w-full rounded font-bold outline-none focus:border-indigo-500">${inventory.map(inv=>`<option value="${inv.id}" ${inv.id===m.itemId?'selected':''}>${inv.name}</option>`).join('')}</select>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <div><label class="block text-[10px] text-gray-500 font-bold text-center mb-0.5">PLT</label><input type="number" value="${m.plt||0}" oninput="productMap[${i}].plt=this.value" class="border border-gray-300 p-2 w-full rounded text-center outline-none focus:border-indigo-500"></div>
+                    <div><label class="block text-[10px] text-gray-500 font-bold text-center mb-0.5">BOX</label><input type="number" value="${m.box||0}" oninput="productMap[${i}].box=this.value" class="border border-gray-300 p-2 w-full rounded text-center outline-none focus:border-indigo-500"></div>
+                    <div><label class="block text-[10px] text-gray-500 font-bold text-center mb-0.5">낱개</label><input type="number" value="${m.pcs||0}" oninput="productMap[${i}].pcs=this.value" class="border border-gray-300 p-2 w-full rounded text-center outline-none focus:border-indigo-500"></div>
+                    <div><label class="block text-[10px] text-indigo-600 font-bold text-center mb-0.5">💰금액</label><input type="number" value="${m.fee||0}" oninput="productMap[${i}].fee=this.value" class="border-2 border-indigo-200 bg-indigo-50 p-2 w-full rounded text-center font-bold outline-none focus:border-indigo-500" placeholder="0"></div>
+                </div>
+                <p class="text-[10px] text-gray-400 leading-tight">💡 <b>금액(원)</b>을 0보다 크게 입력하면 이 제품 출고 시 <b class="text-indigo-500">해당 금액이 택배비로 고정 적용</b>됩니다. (0이면 품목별 자동 계산)</p>
+            </div>`).join(''); document.getElementById('mappingModal').style.display='flex'; }
         function closeMappingModal() { document.getElementById('mappingModal').style.display='none'; }
-        function addMapping() { productMap.push({keyword:'',itemId:inventory[0]?.id,plt:0,box:0,pcs:1}); openMappingModal(); }
+        function addMapping() { productMap.push({keyword:'',itemId:inventory[0]?.id,plt:0,box:0,pcs:1,fee:0}); openMappingModal(); }
         function removeMapping(i) { productMap.splice(i,1); openMappingModal(); }
         function saveMappings() { productMap=productMap.filter(m=>m.keyword.trim()!==''); closeMappingModal(); saveData(); }
 
@@ -738,11 +901,35 @@
 
             const searchDate = document.getElementById('searchDate').value; const filteredLogs = searchDate ? logs.filter(l => l.time.startsWith(searchDate)) : logs.filter(l => l.time.startsWith(currentSelectedMonth));
             
-            document.getElementById('logContainer').innerHTML = filteredLogs.length === 0 ? `<div class="p-6 text-center text-gray-400 font-semibold">조건에 맞는 내역이 없습니다.</div>` : filteredLogs.map(log => { 
-                const idx = logs.indexOf(log); 
-                const isOut = log.type === 'OUT'; 
-                return `<div class="p-3 bg-white border-l-4 ${isOut?'border-blue-400':'border-green-400'} mb-2 rounded-lg shadow-sm"><div class="flex justify-between items-start"><div><p class="${isOut?'text-blue-700':'text-green-700'} font-bold text-sm">${log.text}</p><p class="text-[11px] text-gray-500 mt-1 font-mono">${log.time} <span class="text-indigo-600 font-bold ml-1 border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 rounded-sm">💰 ${(log.fee||0).toLocaleString()}원</span></p></div><button onclick="cancelTransaction(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-red-500 hover:text-white text-gray-500 font-bold transition h-fit shadow-sm">삭제</button></div>${log.memo ? `<p class="text-[11px] text-gray-600 mt-2 bg-gray-50 p-2 rounded border font-medium">📝 ${log.memo}</p>` : ''}</div>`; 
-            }).join('');
+            if (filteredLogs.length === 0) {
+                document.getElementById('logContainer').innerHTML = `<div class="p-6 text-center text-gray-400 font-semibold">조건에 맞는 내역이 없습니다.</div>`;
+            } else {
+                // 📅 날짜별로 묶어서, 각 날짜의 택배비(출고) 총합을 헤더에 표시
+                const groups = {};
+                filteredLogs.forEach(log => { const d = (log.time||'').substring(0,10); (groups[d] = groups[d] || []).push(log); });
+                const dates = Object.keys(groups).sort((a,b) => b.localeCompare(a)); // 최신순
+                const wd = ['일','월','화','수','목','금','토'];
+
+                document.getElementById('logContainer').innerHTML = dates.map(d => {
+                    const dayLogs = groups[d];
+                    let dayOut = 0, dayIn = 0;
+                    dayLogs.forEach(l => { if (l.type === 'OUT') dayOut += (l.fee||0); else if (String(l.type).startsWith('IN')) dayIn += (l.fee||0); });
+                    const wday = (d && !isNaN(new Date(d))) ? wd[new Date(d).getDay()] : '';
+
+                    const header = `<div onclick="filterByDate('${d}')" title="클릭하면 이 날짜만 보기" class="flex justify-between items-center bg-slate-800 text-white px-3 py-2 rounded-lg mb-2 cursor-pointer shadow-sm hover:bg-slate-700 transition">
+                        <span class="font-bold text-sm whitespace-nowrap">📅 ${d.substring(5)}${wday?` (${wday})`:''}</span>
+                        <span class="text-[11px] text-right leading-tight">🚚 택배비 합계 <b class="text-amber-300 text-sm ml-1">${dayOut.toLocaleString()}원</b>${dayIn>0?`<br><span class="text-blue-200">📥 입고비 ${dayIn.toLocaleString()}원</span>`:''}</span>
+                    </div>`;
+
+                    const cards = dayLogs.map(log => {
+                        const idx = logs.indexOf(log);
+                        const isOut = log.type === 'OUT';
+                        return `<div class="p-3 bg-white border-l-4 ${isOut?'border-blue-400':'border-green-400'} mb-2 rounded-lg shadow-sm"><div class="flex justify-between items-start gap-2"><div class="min-w-0"><p class="${isOut?'text-blue-700':'text-green-700'} font-bold text-sm break-words">${log.text}</p><p class="text-[11px] text-gray-500 mt-1 font-mono">${log.time} <span class="text-indigo-600 font-bold ml-1 border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 rounded-sm">💰 ${(log.fee||0).toLocaleString()}원</span></p></div><div class="flex gap-1 shrink-0"><button onclick="openEditLogModal(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-blue-500 hover:text-white text-gray-600 font-bold transition h-fit shadow-sm">수정</button><button onclick="cancelTransaction(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-red-500 hover:text-white text-gray-500 font-bold transition h-fit shadow-sm">삭제</button></div></div>${log.memo ? `<p class="text-[11px] text-gray-600 mt-2 bg-gray-50 p-2 rounded border font-medium">📝 ${log.memo}</p>` : ''}</div>`;
+                    }).join('');
+
+                    return `<div class="mb-3">${header}${cards}</div>`;
+                }).join('');
+            }
         }
     </script>
 </body>
