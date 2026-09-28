@@ -12,6 +12,26 @@
         input[type="date"], input[type="number"], input[type="text"], input[type="password"], select { font-size: 16px !important; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+        #dispatchModal { position:fixed; inset:0; z-index:110; background:#e2e8f0; overflow:auto; padding:20px; }
+        .dispatch-toolbar { max-width:1000px; margin:0 auto 16px; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+        .dispatch-toolbar button { background:#1e40af; color:white; padding:10px 14px; border-radius:6px; margin-left:8px; }
+        #dispatchPaper { max-width:1000px; margin:auto; background:white; color:#111; padding:36px; font-family:Arial,'Malgun Gothic',sans-serif; }
+        #dispatchPaper h1 { font-size:30px; text-align:center; letter-spacing:12px; font-weight:bold; margin:0 0 24px; }
+        #dispatchPaper p { margin:10px 0; }
+        #dispatchPaper table { width:100%; border-collapse:collapse; margin:20px 0; font-size:12px; table-layout:fixed; }
+        #dispatchPaper th, #dispatchPaper td { border:1px solid #777; padding:8px 5px; overflow-wrap:anywhere; white-space:pre-wrap; }
+        #dispatchPaper th { background:#f1f5f9; }
+        #dispatchPaper .signature { margin-top:40px; display:flex; justify-content:space-between; }
+        @media print {
+            @page { size:A4; margin:14mm; }
+            body { margin:0!important; padding:0!important; background:white!important; }
+            body > :not(#dispatchModal) { display:none!important; }
+            #dispatchModal { position:static!important; padding:0; background:white; overflow:visible; }
+            .dispatch-toolbar { display:none!important; }
+            #dispatchPaper { padding:0; max-width:none; }
+            #dispatchPaper thead { display:table-header-group; }
+            #dispatchPaper tr, #dispatchPaper .signature { break-inside:avoid; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-2 sm:p-4 md:p-8 relative mt-4">
@@ -55,7 +75,7 @@
                         <p class="text-base sm:text-lg font-bold"><span id="monthlyStorageFee">0</span> 원</p>
                     </div>
                     <div onclick="openInOutModal('OUT')" class="flex justify-between sm:block items-center border-t sm:border-t-0 border-blue-600 border-opacity-30 pt-2 sm:pt-0 cursor-pointer hover:bg-black hover:bg-opacity-10 p-1.5 rounded-lg transition" title="클릭하시면 상세 출고 내역을 보실 수 있습니다.">
-                        <p class="text-xs text-blue-200 mb-0 sm:mb-1">🚚 택배비 (출고) <span class="text-white ml-1">🔍</span></p>
+                        <p class="text-xs text-blue-200 mb-0 sm:mb-1">🚚 출고비 (택배·박스) <span class="text-white ml-1">🔍</span></p>
                         <p class="text-base sm:text-lg font-bold"><span id="monthlyOutFee">0</span> 원</p>
                     </div>
                     <div onclick="openInOutModal('IN')" class="flex justify-between sm:block items-center border-t sm:border-t-0 border-blue-600 border-opacity-30 pt-2 sm:pt-0 cursor-pointer hover:bg-black hover:bg-opacity-10 p-1.5 rounded-lg transition" title="클릭하시면 상세 입고 내역을 보실 수 있습니다.">
@@ -85,7 +105,8 @@
                     <div><label class="block text-xs font-medium text-gray-700 mb-1">작업 일자</label><input type="date" id="workDate" class="w-full p-2 border border-gray-300 rounded-md font-semibold bg-yellow-50 outline-none"></div>
                     <div><label class="block text-xs font-medium text-gray-700 mb-1">작업 구분</label>
                         <select id="workType" class="w-full p-2 border border-gray-300 rounded-md font-bold text-blue-600 text-center outline-none" onchange="updateButtonText()">
-                            <option value="OUT">📦 출고 (-)</option>
+                            <option value="OUT">🚚 택배출고 (-)</option>
+                            <option value="OUT_BOX">📦 박스출고 (- · 500원/박스)</option>
                             <option value="IN">➕ 일반 입고 (+)</option>
                             <option value="IN_40FT">🚢 40FT 컨테이너 입고 (+)</option>
                         </select>
@@ -94,7 +115,7 @@
                 <div class="mb-3"><label class="block text-xs font-medium text-gray-700 mb-1">품목 선택</label><select id="itemSelect" class="w-full p-2 border border-gray-300 rounded-md font-semibold outline-none"></select></div>
                 <div class="grid grid-cols-3 gap-2 mb-3">
                     <div><label class="block text-xs font-bold text-purple-700 mb-1">파렛트</label><input type="number" id="pltQty" value="0" min="0" class="w-full p-2 border-2 border-purple-200 bg-purple-50 rounded-md text-center font-bold outline-none"></div>
-                    <div><label class="block text-xs font-medium text-gray-700 mb-1">박스</label><input type="number" id="boxQty" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">박스</label><input type="number" id="boxQty" oninput="updateButtonText()" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
                     <div><label class="block text-xs font-medium text-gray-700 mb-1">낱개</label><input type="number" id="pcsQty" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
                 </div>
                 <div class="mb-3"><label class="block text-xs font-medium text-gray-700 mb-1">비고 (메모)</label><input type="text" id="memoInput" class="w-full p-2 border border-gray-300 rounded-md outline-none" placeholder="비고사항 입력"></div>
@@ -121,7 +142,17 @@
                     <div class="flex sm:items-center gap-2 bg-gray-50 p-2 rounded-lg border">
                         <input type="date" id="searchDate" class="border bg-white p-1.5 text-sm rounded cursor-pointer flex-1 sm:flex-none outline-none" onchange="render()">
                         <button onclick="document.getElementById('searchDate').value=''; render()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-medium flex-1 sm:flex-none transition">전체보기</button>
+                        <button onclick="openDispatchSlip()" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded font-bold">🖨️ 조회 출고증</button>
                         <button onclick="requestPasswordThen('clearHistory')" class="text-xs text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded font-medium flex-1 sm:flex-none transition">🔒 데이터 초기화</button>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                    <p class="text-xs text-blue-800 mb-2">함께 출고한 품목을 아래 내역에서 체크한 뒤 ‘선택 묶음 출고증’을 누르세요.</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="selectVisibleDispatches()" class="text-xs border border-blue-200 bg-white px-3 py-2 rounded">조회 출고 전체선택</button>
+                        <button onclick="clearDispatchSelection()" class="text-xs border bg-white px-3 py-2 rounded">선택 해제</button>
+                        <button id="selectedDispatchButton" onclick="openDispatchSlip('selected')" class="text-xs bg-blue-700 text-white font-bold px-3 py-2 rounded disabled:opacity-40" disabled>🖨️ 선택 묶음 출고증 (0건)</button>
+                        <span id="dispatchSelectionSummary" class="text-xs font-bold text-blue-800">0건 선택 · 0박스</span>
                     </div>
                 </div>
                 <div id="logContainer" class="bg-gray-50 p-2 sm:p-4 rounded-lg max-h-80 overflow-y-auto text-sm text-gray-600 border shadow-inner"></div>
@@ -198,8 +229,9 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div><label class="block text-xs font-medium text-gray-700 mb-1">작업 일자</label><input type="date" id="editLogDate" class="w-full p-2 border border-gray-300 rounded-md font-semibold bg-yellow-50 outline-none"></div>
                     <div><label class="block text-xs font-medium text-gray-700 mb-1">작업 구분</label>
-                        <select id="editLogType" class="w-full p-2 border border-gray-300 rounded-md font-bold text-center outline-none">
-                            <option value="OUT">📦 출고 (-)</option>
+                        <select id="editLogType" onchange="updateEditBoxFields()" class="w-full p-2 border border-gray-300 rounded-md font-bold text-center outline-none">
+                            <option value="OUT">🚚 택배출고 (-)</option>
+                            <option value="OUT_BOX">📦 박스출고 (- · 500원/박스)</option>
                             <option value="IN">➕ 일반 입고 (+)</option>
                             <option value="IN_40FT">🚢 40FT 입고 (+)</option>
                         </select>
@@ -208,12 +240,12 @@
                 <div class="bg-gray-50 p-2 rounded text-xs text-gray-500 border">품목: <b id="editLogItemName" class="text-gray-800"></b></div>
                 <div class="grid grid-cols-3 gap-2">
                     <div><label class="block text-xs font-bold text-purple-700 mb-1">파렛트</label><input type="number" id="editLogPlt" min="0" class="w-full p-2 border-2 border-purple-200 bg-purple-50 rounded-md text-center font-bold outline-none"></div>
-                    <div><label class="block text-xs font-medium text-gray-700 mb-1">박스</label><input type="number" id="editLogBox" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">박스</label><input type="number" id="editLogBox" oninput="updateEditBoxFields()" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
                     <div><label class="block text-xs font-medium text-gray-700 mb-1">낱개</label><input type="number" id="editLogPcs" min="0" class="w-full p-2 border border-gray-300 rounded-md text-center font-bold outline-none"></div>
                 </div>
                 <div><label class="block text-xs font-bold text-indigo-700 mb-1">💰 금액 (택배비/원)</label><input type="number" id="editLogFee" min="0" class="w-full p-2 border-2 border-indigo-200 bg-indigo-50 rounded-md text-center font-bold text-indigo-700 outline-none"></div>
                 <div><label class="block text-xs font-medium text-gray-700 mb-1">비고 (메모)</label><input type="text" id="editLogMemo" class="w-full p-2 border border-gray-300 rounded-md outline-none" placeholder="비고사항"></div>
-                <p class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 leading-snug">※ 수량을 변경하면 <b>현재고가 자동 재조정</b>됩니다. 금액은 입력한 값 그대로 저장됩니다.</p>
+                <p class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 leading-snug">※ 수량을 변경하면 <b>현재고가 자동 재조정</b>됩니다. 박스출고 금액은 박스 수 × 500원으로 자동 계산됩니다. 그 외 작업은 입력한 금액으로 저장됩니다.</p>
             </div>
             <div class="mt-4 flex justify-end gap-2 border-t pt-3">
                 <button onclick="closeEditLogModal()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm font-semibold">취소</button>
@@ -226,6 +258,10 @@
     
     <div id="mappingModal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 items-center justify-center z-50 p-2"><div class="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] flex flex-col shadow-2xl"><div class="bg-indigo-600 px-4 py-3 flex justify-between items-center"><h2 class="text-white font-bold">⚙️ 제품 엑셀 매핑 키워드 설정</h2><button onclick="closeMappingModal()" class="text-white text-xl">&times;</button></div><div class="flex-1 overflow-y-auto p-4"><div id="mappingBody" class="space-y-2"></div><button onclick="addMapping()" class="mt-3 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-lg border border-indigo-200 transition">➕ 새 키워드 추가</button></div><div class="bg-gray-50 px-4 py-3 flex gap-2 border-t"><button onclick="closeMappingModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 py-2.5 rounded font-bold transition">닫기</button><button onclick="saveMappings()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded font-bold shadow-md transition">저장</button></div></div></div>
 
+    <div id="dispatchModal" style="display:none" role="dialog" aria-modal="true" aria-label="출고증 미리보기">
+        <div class="dispatch-toolbar"><strong>출고증 미리보기</strong><span><button onclick="window.print()">인쇄 / PDF 저장</button><button onclick="document.getElementById('dispatchModal').style.display='none'">닫기</button></span></div>
+        <div id="dispatchPaper"></div>
+    </div>
     <script>
         const FIREBASE_URL = "https://ts3pl-982ef-default-rtdb.firebaseio.com/counton_data.json"; 
         const ADMIN_PASSWORD = "4656";
@@ -475,7 +511,103 @@
         }
         function closeInOutModal() { document.getElementById('inOutModal').style.display = 'none'; }
 
-        function updateButtonText() { const type = document.getElementById('workType').value; const btn = document.getElementById('submitBtn'); if (type.startsWith('IN')) { btn.innerText = type === 'IN_40FT' ? '🚢 40FT 입고 완료' : '➕ 일반 입고 완료'; btn.className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold p-3 rounded-md transition shadow-sm text-base'; } else { btn.innerText = '📦 출고 완료'; btn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-md transition shadow-sm text-base'; } }
+        function updateButtonText() { updateBoxFields(); const type = document.getElementById('workType').value; const btn = document.getElementById('submitBtn'); if (type.startsWith('IN')) { btn.innerText = type === 'IN_40FT' ? '🚢 40FT 입고 완료' : '➕ 일반 입고 완료'; btn.className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold p-3 rounded-md transition shadow-sm text-base'; } else { btn.innerText = type === 'OUT_BOX' ? '📦 박스출고 완료' : '🚚 택배출고 완료'; btn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-md transition shadow-sm text-base'; } }
+        function updateBoxFields() {
+            const boxOnly = document.getElementById('workType').value === 'OUT_BOX';
+            ['pltQty','pcsQty'].forEach(id => {
+                const el = document.getElementById(id);
+                el.disabled = boxOnly;
+                if (boxOnly) el.value = 0;
+                el.style.opacity = boxOnly ? '0.45' : '1';
+            });
+            const box = Number(document.getElementById('boxQty').value) || 0;
+            document.getElementById('workHelperText').innerText = boxOnly
+                ? `※ 박스출고: 1박스 500원 · 예상 출고비 ${(box * 500).toLocaleString()}원 (박스 수만 입력)`
+                : '※ 택배출고: 기존 품목별 택배 요금 적용 / 입고: 기존 입고 요금 적용';
+        }
+        function updateEditBoxFields() {
+            const boxOnly = document.getElementById('editLogType').value === 'OUT_BOX';
+            ['editLogPlt','editLogPcs'].forEach(id => {
+                const el = document.getElementById(id);
+                el.disabled = boxOnly;
+                if (boxOnly) el.value = 0;
+                el.style.opacity = boxOnly ? '0.45' : '1';
+            });
+            const fee = document.getElementById('editLogFee');
+            fee.readOnly = boxOnly;
+            if (boxOnly) fee.value = (Number(document.getElementById('editLogBox').value) || 0) * 500;
+        }
+        function validateQuantities(mode) {
+            const ids = mode === 'work' ? ['pltQty','boxQty','pcsQty'] : ['editLogPlt','editLogBox','editLogPcs'];
+            const values = ids.map(id => Number(document.getElementById(id).value));
+            const type = document.getElementById(mode === 'work' ? 'workType' : 'editLogType').value;
+            if (values.some(v => !Number.isSafeInteger(v) || v < 0) || values.every(v => v === 0)) {
+                alert('수량은 0 이상의 정수로 입력하고, 출고 또는 입고 수량을 1 이상 입력하세요.'); return false;
+            }
+            if (type === 'OUT_BOX' && (values[0] !== 0 || values[2] !== 0 || values[1] < 1 || !Number.isSafeInteger(values[1] * 500))) {
+                alert('박스출고는 박스 수만 1 이상의 정수로 입력하세요.'); return false;
+            }
+            return true;
+        }
+        function escapeSlip(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        const dispatchSelection = new Set();
+        function visibleDispatches() {
+            const period = document.getElementById('searchDate').value || currentSelectedMonth;
+            return logs.filter(l => l.type === 'OUT' && l.time.startsWith(period));
+        }
+        function updateDispatchSelection() {
+            const visible = new Set(visibleDispatches());
+            for (const log of dispatchSelection) if (!visible.has(log)) dispatchSelection.delete(log);
+            const boxes = [...dispatchSelection].reduce((sum,l) => sum + (Number(l.box)||0), 0);
+            const btn = document.getElementById('selectedDispatchButton');
+            btn.disabled = dispatchSelection.size === 0;
+            btn.innerText = '🖨️ 선택 묶음 출고증 (' + dispatchSelection.size + '건)';
+            document.getElementById('dispatchSelectionSummary').innerText = dispatchSelection.size + '건 선택 · ' + boxes.toLocaleString() + '박스';
+        }
+        function toggleDispatchSelection(index, checked) {
+            const log = logs[index];
+            if (!log || log.type !== 'OUT') return;
+            if (checked) dispatchSelection.add(log); else dispatchSelection.delete(log);
+            updateDispatchSelection();
+        }
+        function selectVisibleDispatches() {
+            visibleDispatches().forEach(log => dispatchSelection.add(log));
+            render();
+        }
+        function clearDispatchSelection() { dispatchSelection.clear(); render(); }
+        function openDispatchSlip(index = null) {
+            updateDispatchSelection();
+            const date = document.getElementById('searchDate').value;
+            const selected = index === 'selected' ? [...dispatchSelection] : index === null
+                ? logs.filter(l => l.type === 'OUT' && l.time.startsWith(date || currentSelectedMonth))
+                : [logs[index]].filter(l => l && l.type === 'OUT');
+            if (!selected.length) return alert('출력할 출고 내역이 없습니다.');
+            const rows = [...selected].sort((a,b) => a.time.localeCompare(b.time));
+            const total = rows.reduce((sum,l) => sum + (Number(l.fee) || 0), 0);
+            const boxes = rows.reduce((sum,l) => sum + (Number(l.box) || 0), 0);
+            const plts = rows.reduce((sum,l) => sum + (Number(l.plt) || 0), 0);
+            const pcs = rows.reduce((sum,l) => sum + (Number(l.pcs) || 0), 0);
+            document.getElementById('dispatchPaper').innerHTML = `<h1>출 고 증</h1>
+                <p><b>거래처:</b> 카운트온</p>
+                <p><b>출고 기간:</b> ${escapeSlip(rows[0].time.slice(0,10))} ~ ${escapeSlip(rows[rows.length-1].time.slice(0,10))} · ${rows.length}건</p>
+                <table><colgroup><col style="width:13%"><col style="width:23%"><col style="width:13%"><col style="width:16%"><col style="width:13%"><col style="width:22%"></colgroup>
+                <thead><tr><th>출고일</th><th>품목</th><th>출고 구분</th><th>수량</th><th>출고비</th><th>비고</th></tr></thead><tbody>
+                ${rows.map(l => {
+                    const item = inventory.find(i => i.id === l.itemId);
+                    const name = l.itemName || (item && item.name) || l.text || '(삭제된 품목)';
+                    const qty = [l.plt ? l.plt+' PLT' : '',l.box ? l.box+' 박스' : '',l.pcs ? l.pcs+' 개' : ''].filter(Boolean).join(' / ');
+                    const boxOnly = l.originalType === 'OUT_BOX';
+                    return `<tr><td>${escapeSlip(l.time.slice(0,10))}</td><td>${escapeSlip(name)}</td><td>${boxOnly ? '박스출고<br>500원/박스' : '택배출고'}</td><td>${escapeSlip(qty)}</td><td style="text-align:right">${(Number(l.fee)||0).toLocaleString()}원</td><td>${escapeSlip(l.memo)}</td></tr>`;
+                }).join('')}</tbody></table>
+                <p><b>수량 합계:</b> ${plts.toLocaleString()} PLT / ${boxes.toLocaleString()} 박스 / ${pcs.toLocaleString()} 개</p>
+                <p style="text-align:right;font-size:18px"><b>출고비 합계: ${total.toLocaleString()}원</b></p>
+                <p style="font-size:12px">※ 수량은 등록 단위별 합계이며, 출고비는 등록 내역 기준입니다.</p>
+                <div class="signature"><span>출고 담당자: _________________ (인)</span><span>인수자: _________________ (인)</span></div>`;
+            document.getElementById('dispatchModal').style.display = 'block';
+        }
+
         function recalcDailyPlt(dateStr) { let plt = 0; inventory.forEach(i => plt += Math.ceil(i.box / i.pltStd)); dailyPltLog[dateStr] = plt; }
 
         function openItemModal(id = null) { document.getElementById('itemModal').style.display = 'flex'; if (id) { const item = inventory.find(i => i.id === id); document.getElementById('modalItemId').value = item.id; document.getElementById('modalItemName').value = item.name; document.getElementById('modalItemBox').value = item.box; document.getElementById('modalItemPcs').value = item.pcs; document.getElementById('modalItemPltStd').value = item.pltStd; document.getElementById('modalItemPerBox').value = item.perBox; document.getElementById('modalDeleteBtn').style.display = 'block'; } else { document.getElementById('modalItemId').value = ''; document.getElementById('modalItemName').value = ''; document.getElementById('modalItemBox').value = 0; document.getElementById('modalItemPcs').value = 0; document.getElementById('modalItemPltStd').value = 40; document.getElementById('modalItemPerBox').value = 0; document.getElementById('modalDeleteBtn').style.display = 'none'; } }
@@ -487,14 +619,16 @@
             const inputDateStr = document.getElementById('workDate').value || getFormattedDate(); 
             const type = document.getElementById('workType').value; 
             const id = document.getElementById('itemSelect').value; 
-            const pltQty = parseInt(document.getElementById('pltQty').value)||0; 
+            if (!validateQuantities('work')) return;
+            const pltQty = Number(document.getElementById('pltQty').value); 
             const boxQty = parseInt(document.getElementById('boxQty').value)||0; 
             const pcsQty = parseInt(document.getElementById('pcsQty').value)||0; 
             const memoText = document.getElementById('memoInput').value.trim(); 
             
             if (pltQty===0&&boxQty===0&&pcsQty===0) { alert('수량을 입력하세요.'); return; } 
             
-            const item = inventory.find(i => i.id === id); 
+            const item = inventory.find(i => i.id === id);
+            if (!item) return alert('품목을 선택하세요.');
             const now = new Date(); 
             const timeStr = `${inputDateStr} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`; 
             
@@ -511,6 +645,10 @@
                 logText = `${prefix} ${item.name} ➕ ${pltQty}PLT / ${boxQty}박스 / ${pcsQty}개`; 
                 item.box += appliedBoxes; 
                 item.pcs += pcsQty; 
+            } else if (type === 'OUT_BOX') {
+                fee = boxQty * 500;
+                logText = `[박스출고] ${item.name} 📦 ${boxQty}박스 (500원/박스)`;
+                item.box -= boxQty;
             } else { 
                 fee = pltQty * 5000; 
                 // 품목명에 따라 출고비(택배비) 자동 부과
@@ -546,12 +684,13 @@
             } 
             
             const dbType = type.startsWith('IN') ? 'IN' : 'OUT';
-            logs.unshift({ itemId: id, type: dbType, originalType: type, plt: pltQty, box: boxQty, pcs: pcsQty, fee: Number(fee), text: logText, memo: memoText, time: timeStr }); 
+            logs.unshift({ itemName: item.name, itemId: id, type: dbType, originalType: type, plt: pltQty, box: boxQty, pcs: pcsQty, fee: Number(fee), text: logText, memo: memoText, time: timeStr }); 
             
             document.getElementById('pltQty').value=0; 
             document.getElementById('boxQty').value=0; 
             document.getElementById('pcsQty').value=0; 
-            document.getElementById('memoInput').value=''; 
+            document.getElementById('memoInput').value='';
+            updateButtonText(); 
             
             recalcDailyPlt(inputDateStr); 
             currentSelectedMonth = inputDateStr.substring(0, 7); 
@@ -596,6 +735,7 @@
             document.getElementById('editLogPcs').value = Number(log.pcs)||0;
             document.getElementById('editLogFee').value = Number(log.fee)||0;
             document.getElementById('editLogMemo').value = log.memo || '';
+            updateEditBoxFields();
             document.getElementById('editLogModal').style.display = 'flex';
         }
         function closeEditLogModal() { document.getElementById('editLogModal').style.display = 'none'; editingLogIndex = -1; }
@@ -607,6 +747,7 @@
             const item = inventory.find(i => i.id === log.itemId);
 
             // 1) 기존 재고 효과 되돌리기
+            if (!validateQuantities('edit')) return;
             if (item) applyInventoryEffect(log, -1);
 
             // 2) 새 값 읽기
@@ -617,7 +758,7 @@
             const newPlt = parseInt(document.getElementById('editLogPlt').value)||0;
             const newBox = parseInt(document.getElementById('editLogBox').value)||0;
             const newPcs = parseInt(document.getElementById('editLogPcs').value)||0;
-            const newFee = parseInt(document.getElementById('editLogFee').value)||0;
+            const newFee = newType === 'OUT_BOX' ? newBox * 500 : (parseInt(document.getElementById('editLogFee').value)||0);
             const newMemo = document.getElementById('editLogMemo').value.trim();
 
             // 3) 로그 갱신
@@ -633,7 +774,10 @@
             // 구분이 바뀌었는데 태그가 안 맞으면 기본 태그로 교정
             if (log.type === 'OUT' && tag.includes('입고')) tag = '[출고]';
             if (log.type === 'IN' && tag.includes('출고')) tag = (newType === 'IN_40FT') ? '[40FT입고]' : '[입고]';
-            const nm = item ? item.name : '';
+            if (newType === 'OUT_BOX') tag = '[박스출고]';
+            else if (tag === '[박스출고]') tag = newType.startsWith('IN') ? '[입고]' : '[출고]';
+            const nm = item ? item.name : (log.itemName || '(삭제된 품목)');
+            log.itemName = nm;
             const parts = [];
             if (newPlt>0) parts.push(newPlt+'PLT');
             if (newBox>0) parts.push(newBox+'박스');
@@ -835,7 +979,7 @@
                 
                 const combinedMemo = `[송장] ${o.invoice || '없음'} | [주소] ${o.address} ${o.name ? '('+o.name+')':''}`; 
                 
-                logs.unshift({itemId:item.id,type:'OUT',originalType:'OUT',plt,box,pcs,fee:Number(fee),text:`[출고일괄] ${item.name} ${qText.join(' ')}`,memo:combinedMemo,time:tStr}); 
+                logs.unshift({itemName:item.name,itemId:item.id,type:'OUT',originalType:'OUT',plt,box,pcs,fee:Number(fee),text:`[출고일괄] ${item.name} ${qText.join(' ')}`,memo:combinedMemo,time:tStr}); 
             }); 
             
             recalcDailyPlt(inputDate); 
@@ -899,6 +1043,7 @@
             document.getElementById('monthlyStorageFee').innerText = mStorageFee.toLocaleString(); document.getElementById('monthlyInFee').innerText = mInFee.toLocaleString(); document.getElementById('monthlyOutFee').innerText = mOutFee.toLocaleString(); document.getElementById('monthlyTotalRevenue').innerText = (mInFee + mOutFee + mStorageFee).toLocaleString();
             document.getElementById('itemSelect').innerHTML = inventory.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
 
+            updateDispatchSelection();
             const searchDate = document.getElementById('searchDate').value; const filteredLogs = searchDate ? logs.filter(l => l.time.startsWith(searchDate)) : logs.filter(l => l.time.startsWith(currentSelectedMonth));
             
             if (filteredLogs.length === 0) {
@@ -918,13 +1063,13 @@
 
                     const header = `<div onclick="filterByDate('${d}')" title="클릭하면 이 날짜만 보기" class="flex justify-between items-center bg-slate-800 text-white px-3 py-2 rounded-lg mb-2 cursor-pointer shadow-sm hover:bg-slate-700 transition">
                         <span class="font-bold text-sm whitespace-nowrap">📅 ${d.substring(5)}${wday?` (${wday})`:''}</span>
-                        <span class="text-[11px] text-right leading-tight">🚚 택배비 합계 <b class="text-amber-300 text-sm ml-1">${dayOut.toLocaleString()}원</b>${dayIn>0?`<br><span class="text-blue-200">📥 입고비 ${dayIn.toLocaleString()}원</span>`:''}</span>
+                        <span class="text-[11px] text-right leading-tight">🚚 출고비 합계 <b class="text-amber-300 text-sm ml-1">${dayOut.toLocaleString()}원</b>${dayIn>0?`<br><span class="text-blue-200">📥 입고비 ${dayIn.toLocaleString()}원</span>`:''}</span>
                     </div>`;
 
                     const cards = dayLogs.map(log => {
                         const idx = logs.indexOf(log);
                         const isOut = log.type === 'OUT';
-                        return `<div class="p-3 bg-white border-l-4 ${isOut?'border-blue-400':'border-green-400'} mb-2 rounded-lg shadow-sm"><div class="flex justify-between items-start gap-2"><div class="min-w-0"><p class="${isOut?'text-blue-700':'text-green-700'} font-bold text-sm break-words">${log.text}</p><p class="text-[11px] text-gray-500 mt-1 font-mono">${log.time} <span class="text-indigo-600 font-bold ml-1 border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 rounded-sm">💰 ${(log.fee||0).toLocaleString()}원</span></p></div><div class="flex gap-1 shrink-0"><button onclick="openEditLogModal(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-blue-500 hover:text-white text-gray-600 font-bold transition h-fit shadow-sm">수정</button><button onclick="cancelTransaction(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-red-500 hover:text-white text-gray-500 font-bold transition h-fit shadow-sm">삭제</button></div></div>${log.memo ? `<p class="text-[11px] text-gray-600 mt-2 bg-gray-50 p-2 rounded border font-medium">📝 ${log.memo}</p>` : ''}</div>`;
+                        return `<div class="p-3 bg-white border-l-4 ${isOut?'border-blue-400':'border-green-400'} mb-2 rounded-lg shadow-sm"><div class="flex justify-between items-start gap-2"><div class="min-w-0">${isOut ? `<label class="inline-flex items-center gap-2 text-xs font-bold text-blue-800 mb-2 cursor-pointer"><input type="checkbox" class="w-4 h-4" ${dispatchSelection.has(log) ? 'checked' : ''} onchange="toggleDispatchSelection(${idx}, this.checked)"> 묶음 출고증에 포함</label>` : ''}<p class="${isOut?'text-blue-700':'text-green-700'} font-bold text-sm break-words">${log.text}</p><p class="text-[11px] text-gray-500 mt-1 font-mono">${log.time} <span class="text-indigo-600 font-bold ml-1 border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 rounded-sm">💰 ${(log.fee||0).toLocaleString()}원</span></p></div><div class="flex gap-1 shrink-0">${isOut ? `<button onclick="openDispatchSlip(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-blue-50 text-blue-700 font-bold">출고증</button>` : ''}<button onclick="openEditLogModal(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-blue-500 hover:text-white text-gray-600 font-bold transition h-fit shadow-sm">수정</button><button onclick="cancelTransaction(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-red-500 hover:text-white text-gray-500 font-bold transition h-fit shadow-sm">삭제</button></div></div>${log.memo ? `<p class="text-[11px] text-gray-600 mt-2 bg-gray-50 p-2 rounded border font-medium">📝 ${log.memo}</p>` : ''}</div>`;
                     }).join('');
 
                     return `<div class="mb-3">${header}${cards}</div>`;
