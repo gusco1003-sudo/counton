@@ -63,7 +63,7 @@
             <div class="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-white shadow-md">
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 pb-3 border-b border-blue-600 gap-2">
                     <h2 class="text-base sm:text-lg font-bold flex items-center gap-2 text-white">📊 월별 통합 정산</h2>
-                    <select id="monthSelector" onchange="handleMonthChange()" class="bg-blue-900 text-white font-bold border border-blue-500 rounded-md px-3 py-2 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer shadow-sm w-full sm:w-auto"></select>
+                    <div class="flex flex-wrap gap-2 items-center"><select id="monthSelector" onchange="handleMonthChange()" class="bg-blue-900 text-white font-bold border border-blue-500 rounded-md px-3 py-2 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer shadow-sm w-full sm:w-auto"></select><button type="button" id="settlementOpen" onclick="openSettlement()" disabled class="bg-white text-blue-800 font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50">정산서 발행</button></div>
                 </div>
                 <div class="mb-3 sm:mb-4">
                     <h3 class="text-xs sm:text-sm font-semibold text-blue-200 mb-1">선택한 월 합산 매출 (총액)</h3>
@@ -377,7 +377,7 @@
         function finishLoading() {
             const today = getFormattedDate();
             if (!dailyPltLog[today]) { let plt = 0; inventory.forEach(i => plt += Math.ceil(i.box / i.pltStd)); dailyPltLog[today] = plt; }
-            updateButtonText(); render();
+            updateButtonText(); render(); document.getElementById('settlementOpen').disabled = false;
         }
 
         function saveData() {
@@ -1077,5 +1077,132 @@
             }
         }
     </script>
+<style id="settlementStyles">
+#settlementModal[hidden]{display:none!important}
+#settlementModal{position:fixed;inset:0;z-index:150;background:#e8edf3;color:#183047;overflow:auto;padding:20px;font:14px/1.6 'Malgun Gothic',sans-serif}
+#settlementModal *{box-sizing:border-box}
+.settlement-toolbar,.settlement-options,#settlementPaper{max-width:850px;margin:0 auto 16px}
+.settlement-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.settlement-toolbar strong{font-size:19px}.settlement-toolbar button{border:1px solid #bdccdb;border-radius:7px;padding:9px 15px;background:white;color:#24435e;cursor:pointer}
+.settlement-toolbar button.primary{background:#1d4ed8;border-color:#1d4ed8;color:white}
+.settlement-options{background:white;border:1px solid #d4dfe9;border-radius:10px;padding:15px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.settlement-options label{display:block;font-size:12px;font-weight:bold}.settlement-options input:not([type=checkbox]),.settlement-options textarea{display:block;width:100%;border:1px solid #b8c7d6;border-radius:5px;padding:7px 9px;color:#183047;background:white;font:inherit!important}
+.settlement-options .wide{grid-column:1/-1}.settlement-options p{font-size:12px;color:#64748b;margin:0}
+#settlementPaper{padding:40px 44px;background:white;box-shadow:0 3px 15px #1e293b12}
+#settlementPaper h1{font-size:30px;font-weight:800;letter-spacing:3px;margin:6px 0 12px;color:#183047}
+#settlementPaper .statement-kicker{font-size:11px;letter-spacing:2px;color:#58738d;margin:0}
+#settlementPaper .statement-head{display:flex;justify-content:space-between;border-bottom:3px solid #244a6d;padding-bottom:20px;gap:16px}
+#settlementPaper .statement-meta{text-align:right;font-size:12px;line-height:1.9}
+#settlementPaper .statement-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px 0}
+#settlementPaper .statement-label{font-size:11px;color:#698094;margin-bottom:4px}
+#settlementPaper .statement-party{font-size:19px;font-weight:bold;overflow-wrap:anywhere}
+#settlementPaper .statement-amount{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#edf4fa;padding:18px 20px;border-radius:6px;margin:0 0 22px}
+#settlementPaper .statement-amount strong{font-size:28px}
+#settlementPaper table{border-collapse:collapse;width:100%;font-size:12px;table-layout:fixed;margin:14px 0}
+#settlementPaper th{background:#f1f5f9;color:#456077;text-align:left;font-weight:bold}
+#settlementPaper th,#settlementPaper td{padding:11px 10px;border-bottom:1px solid #d8e1e9;overflow-wrap:anywhere}
+#settlementPaper .num{text-align:right;font-variant-numeric:tabular-nums}
+#settlementPaper .statement-sums{max-width:330px;margin:16px 0 18px auto}
+#settlementPaper .statement-sums div{display:flex;justify-content:space-between;border-bottom:1px solid #d8e1e9;padding:8px 0}
+#settlementPaper .statement-sums div:last-child{font-size:17px;font-weight:800;border-bottom:2px solid #244a6d}
+#settlementPaper .statement-note{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f9fb;padding:12px;margin:18px 0}
+#settlementPaper .statement-foot{font-size:11px;color:#62778a;margin-top:24px;line-height:1.8}
+#settlementPaper .statement-detail{margin-top:32px}#settlementPaper h2{font-size:19px;font-weight:bold;margin:0 0 10px}
+@media(max-width:600px){#settlementModal{padding:10px}.settlement-options{grid-template-columns:1fr}#settlementPaper{padding:25px 16px}.statement-head{flex-direction:column}#settlementPaper .statement-meta{text-align:left}#settlementPaper .statement-amount{padding:12px}#settlementPaper .statement-amount strong{font-size:22px}#settlementPaper th,#settlementPaper td{padding:8px 5px;font-size:11px}}
+@media print{
+ @page{size:A4;margin:14mm}
+ body.settlement-print{margin:0!important;padding:0!important;background:white!important;overflow:visible!important}
+ body.settlement-print > :not(#settlementModal){display:none!important}
+ body.settlement-print > #settlementModal{display:block!important;position:static!important;inset:auto!important;padding:0!important;background:white!important;overflow:visible!important;height:auto!important}
+ body.settlement-print .settlement-toolbar,body.settlement-print .settlement-options{display:none!important}
+ body.settlement-print #settlementPaper{padding:0;max-width:none;box-shadow:none;margin:0}
+ #settlementPaper thead{display:table-header-group}#settlementPaper tr,#settlementPaper .statement-sums,#settlementPaper .statement-amount{break-inside:avoid}
+ #settlementPaper .statement-detail{break-before:page;margin-top:0}#settlementPaper .statement-detail th,#settlementPaper .statement-detail td{padding:5px 6px;font-size:10px}
+}
+</style>
+<div id="settlementModal" hidden role="dialog" aria-modal="true" aria-labelledby="settlementHeading">
+ <div class="settlement-toolbar"><strong id="settlementHeading">정산서 미리보기</strong><div><button type="button" class="primary" onclick="printSettlement()">인쇄 / PDF 저장</button> <button type="button" onclick="closeSettlement()">닫기</button></div></div>
+ <div class="settlement-options">
+  <label for="statementIssuer">발행 업체명<input id="statementIssuer" value="TS3PL" maxlength="80" oninput="renderSettlement()"></label>
+  <label for="statementIssueDate">발행일<input id="statementIssueDate" type="date" onchange="renderSettlement()"></label>
+  <label class="wide" for="statementMemo">추가 안내 (선택)<textarea id="statementMemo" rows="2" maxlength="400" placeholder="입금 안내 등 정산서에 표시할 내용을 입력하세요." oninput="renderSettlement()"></textarea></label>
+  <label class="wide"><input id="statementDetails" type="checkbox" onchange="renderSettlement()"> 일별 정산 내역 첨부</label>
+  <p class="wide">선택한 월의 현재 화면 자료로 작성합니다. PDF는 ‘인쇄 / PDF 저장’을 누른 뒤 인쇄 대상에서 ‘PDF로 저장’을 선택하세요.</p>
+ </div>
+ <article id="settlementPaper"></article>
+</div>
+<script id="settlementScript">
+'use strict';
+const SETTLEMENT_CLIENT="카운트온",SETTLEMENT_CODE="COUNTON";
+let settlementSnapshot=null,settlementPreviousTitle='',settlementPreviousOverflow='';
+const statementEscape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const statementMoney=n=>n.toLocaleString('ko-KR');
+function buildSettlement(month){
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw Error('정산월을 선택해 주세요.');
+ const today=getFormattedDate(),first=month+'-01';
+ if(first>today)throw Error('미래 월의 정산서는 발행할 수 없습니다.');
+ const [year,mon]=month.split('-').map(Number),last=month+'-'+String(new Date(year,mon,0).getDate()).padStart(2,'0');
+ const end=last<today?last:today;
+ const storage=buildDailyStorage(month);
+ const daily=new Map(),entryCounts={IN:0,OUT:0};
+ for(let day=1;day<=Number(end.slice(8));day++){
+  const date=month+'-'+String(day).padStart(2,'0');
+  const qty=Number(storage[date]??0);
+  if(!Number.isFinite(qty)||qty<0)throw Error(date+'의 보관 수량을 확인해 주세요.');
+  daily.set(date,{date,plt:qty,storage:qty*700,inFee:0,outFee:0,manual:Object.prototype.hasOwnProperty.call(manualStorageLog,date)});
+ }
+ for(const log of logs){
+  if(!log||typeof log.time!=='string'||!log.time.startsWith(month))continue;
+  const incoming=String(log.type||'').startsWith('IN'),outgoing=log.type==='OUT';
+  if(!incoming&&!outgoing)continue;
+  const date=log.time.slice(0,10),row=daily.get(date);
+  if(!row)throw Error('정산 기간을 벗어난 작업일이 있습니다: '+date);
+  const fee=Number(log.fee??0);if(!Number.isFinite(fee))throw Error(date+'의 작업 금액을 확인해 주세요.');
+  if(incoming){row.inFee+=fee;entryCounts.IN++}else{row.outFee+=fee;entryCounts.OUT++}
+ }
+ const days=[...daily.values()];
+ const result={month,first,end,days,entryCounts,storage:0,inFee:0,outFee:0,pltDays:0};
+ days.forEach(d=>{result.storage+=d.storage;result.inFee+=d.inFee;result.outFee+=d.outFee;result.pltDays+=d.plt});
+ result.supply=result.storage+result.inFee+result.outFee;result.vat=Math.round(result.supply*.1);result.total=result.supply+result.vat;
+ if(![result.storage,result.inFee,result.outFee,result.supply,result.vat,result.total].every(Number.isSafeInteger))throw Error('정산 금액의 숫자 형식을 확인해 주세요.');
+ return result;
+}
+function openSettlement(){
+ try{
+  if(document.getElementById('settlementOpen').disabled)return;
+  const snapshot=buildSettlement(currentSelectedMonth);
+  const shown=Number(document.getElementById('monthlyTotalRevenue').innerText.replace(/,/g,'').trim());
+  if(shown!==snapshot.supply)throw Error('현재 화면과 정산 금액이 다릅니다. 선택한 월을 다시 조회한 뒤 발행해 주세요.');
+  settlementSnapshot=snapshot;settlementPreviousTitle=document.title;settlementPreviousOverflow=document.body.style.overflow;
+  document.getElementById('statementIssueDate').value=getFormattedDate();
+  renderSettlement();document.getElementById('settlementModal').hidden=false;document.body.classList.add('settlement-print');document.body.style.overflow='hidden';
+  document.getElementById('statementIssuer').focus();
+ }catch(e){alert('정산서 발행 전 확인: '+e.message)}
+}
+function renderSettlement(){
+ const r=settlementSnapshot;if(!r)return;
+ const issuer=document.getElementById('statementIssuer').value.trim()||'TS3PL',issueDate=document.getElementById('statementIssueDate').value;
+ const memo=document.getElementById('statementMemo').value.trim(),details=document.getElementById('statementDetails').checked;
+ const lines=[['보관료',statementMoney(r.pltDays)+' PLT·일 × 700원',r.storage],['입고비','입고 작업 '+r.entryCounts.IN+'개 기록 · 등록 금액 합계',r.inFee],['출고비','출고 작업 '+r.entryCounts.OUT+'개 기록 · 등록 금액 합계',r.outFee]];
+ document.getElementById('settlementPaper').innerHTML=`<div class="statement-head"><div><p class="statement-kicker">MONTHLY LOGISTICS STATEMENT</p><h1>물류비 정산서</h1><p>${statementEscape(r.month.replace('-','년 '))}월 정산</p></div><div class="statement-meta">문서번호 ${SETTLEMENT_CODE}-${r.month.replace('-','')}<br>발행일 ${statementEscape(issueDate||'미입력')}<br>정산 기간 ${r.first} ~ ${r.end}</div></div>
+ <div class="statement-parties"><div><p class="statement-label">수신</p><p class="statement-party">${SETTLEMENT_CLIENT} 귀중</p></div><div><p class="statement-label">발행</p><p class="statement-party">${statementEscape(issuer)}</p></div></div>
+ <div class="statement-amount"><span>청구 합계 <small>(부가세 포함)</small></span><strong>${statementMoney(r.total)}원</strong></div>
+ <table><colgroup><col style="width:20%"><col style="width:51%"><col style="width:29%"></colgroup><thead><tr><th>항목</th><th>산출 내역</th><th class="num">금액 (원)</th></tr></thead><tbody>${lines.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td class="num">${statementMoney(x[2])}</td></tr>`).join('')}</tbody></table>
+ <div class="statement-sums"><div><span>공급가액</span><strong>${statementMoney(r.supply)}원</strong></div><div><span>부가세 (10%)</span><strong>${statementMoney(r.vat)}원</strong></div><div><span>청구 합계</span><strong>${statementMoney(r.total)}원</strong></div></div>
+ ${memo?'<div class="statement-note">'+statementEscape(memo)+'</div>':''}
+ <p class="statement-foot">보관료는 기존 정산 화면의 일별 청구 수량(수동 조정 포함)을 적용합니다.<br>입고비·출고비는 선택 월에 등록된 작업 금액을 합산합니다. 부가세는 공급가액 합계의 10%를 원 단위 반올림합니다.<br>본 문서는 물류비 정산 내역서입니다.</p>
+ ${details?`<section class="statement-detail"><h2>일별 정산 내역 · ${SETTLEMENT_CLIENT}</h2><p>${r.first} ~ ${r.end} / 금액 단위: 원, 부가세 별도</p><table><colgroup><col style="width:22%"><col style="width:14%"><col style="width:20%"><col style="width:20%"><col style="width:24%"></colgroup><thead><tr><th>일자</th><th class="num">청구 PLT</th><th class="num">보관료</th><th class="num">입고비</th><th class="num">출고비</th></tr></thead><tbody>${r.days.map(d=>`<tr><td>${d.date}${d.manual?' *':''}</td><td class="num">${statementMoney(d.plt)}</td><td class="num">${statementMoney(d.storage)}</td><td class="num">${statementMoney(d.inFee)}</td><td class="num">${statementMoney(d.outFee)}</td></tr>`).join('')}<tr><th>합계</th><th class="num">${statementMoney(r.pltDays)} PLT·일</th><th class="num">${statementMoney(r.storage)}</th><th class="num">${statementMoney(r.inFee)}</th><th class="num">${statementMoney(r.outFee)}</th></tr></tbody></table>${r.days.some(d=>d.manual)?'<p class="statement-foot">* 표시는 보관 수량을 수동 조정한 일자입니다.</p>':''}</section>`:''}`;
+}
+function printSettlement(){
+ if(!settlementSnapshot)return;
+ const date=document.getElementById('statementIssueDate');if(!date.value||!date.checkValidity()){alert('올바른 발행일을 입력해 주세요.');date.focus();return}
+ renderSettlement();document.title=SETTLEMENT_CLIENT+'_정산서_'+settlementSnapshot.month;window.print();
+}
+function closeSettlement(){document.getElementById('settlementModal').hidden=true;document.body.classList.remove('settlement-print');document.body.style.overflow=settlementPreviousOverflow;document.title=settlementPreviousTitle;document.getElementById('settlementOpen').focus()}
+window.addEventListener('afterprint',()=>{if(settlementPreviousTitle)document.title=settlementPreviousTitle});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('settlementModal').hidden)closeSettlement()});
+</script>
+
 </body>
 </html>
+
