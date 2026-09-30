@@ -63,13 +63,13 @@
             <div class="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-white shadow-md">
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 pb-3 border-b border-blue-600 gap-2">
                     <h2 class="text-base sm:text-lg font-bold flex items-center gap-2 text-white">📊 월별 통합 정산</h2>
-                    <div class="flex flex-wrap gap-2 items-center"><select id="monthSelector" onchange="handleMonthChange()" class="bg-blue-900 text-white font-bold border border-blue-500 rounded-md px-3 py-2 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer shadow-sm w-full sm:w-auto"></select><button type="button" id="settlementOpen" onclick="openSettlement()" disabled class="bg-white text-blue-800 font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50">정산서 발행</button></div>
+                    <div class="flex flex-wrap gap-2 items-center"><select id="monthSelector" onchange="handleMonthChange()" class="bg-blue-900 text-white font-bold border border-blue-500 rounded-md px-3 py-2 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer shadow-sm w-full sm:w-auto"></select><button type="button" id="freightOpen" onclick="openFreightModal()" disabled class="bg-amber-300 text-blue-950 font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50">화물비 추가</button><button type="button" id="settlementOpen" onclick="openSettlement()" disabled class="bg-white text-blue-800 font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50">정산서 발행</button></div>
                 </div>
                 <div class="mb-3 sm:mb-4">
                     <h3 class="text-xs sm:text-sm font-semibold text-blue-200 mb-1">선택한 월 합산 매출 (총액)</h3>
                     <div class="text-3xl sm:text-4xl font-extrabold leading-tight"><span id="monthlyTotalRevenue">0</span> <span class="text-base sm:text-xl font-normal opacity-80">원</span></div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 bg-black bg-opacity-20 p-3 sm:p-4 rounded-lg">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-3 bg-black bg-opacity-20 p-3 sm:p-4 rounded-lg">
                     <div onclick="openStorageModal()" class="flex justify-between sm:block items-center cursor-pointer hover:bg-black hover:bg-opacity-10 p-1.5 rounded-lg transition" title="클릭하시면 상세 일별 보관 내역을 보실 수 있습니다.">
                         <p class="text-xs text-blue-200 mb-0 sm:mb-1">📦 보관료 (700원/PLT·일) <span class="text-white ml-1">🔍</span></p>
                         <p class="text-base sm:text-lg font-bold"><span id="monthlyStorageFee">0</span> 원</p>
@@ -82,6 +82,7 @@
                         <p class="text-xs text-blue-200 mb-0 sm:mb-1">📥 입고비 (박스+PLT) <span class="text-white ml-1">🔍</span></p>
                         <p class="text-base sm:text-lg font-bold"><span id="monthlyInFee">0</span> 원</p>
                     </div>
+<button type="button" id="viewFreight" onclick="openInOutModal('FREIGHT')" class="flex justify-between sm:block items-center p-1.5 rounded-lg hover:bg-black hover:bg-opacity-10"><p class="text-xs text-blue-200 mb-1">🚛 화물비 🔍</p><p class="text-base sm:text-lg font-bold"><span id="monthlyFreightFee">0</span> 원</p></button>
                 </div>
             </div>
 
@@ -138,7 +139,7 @@
 
             <div>
                 <div class="flex flex-col gap-2 mb-3">
-                    <h3 class="text-base font-bold text-gray-800">🔍 <span id="logTitleMonth" class="text-blue-600"></span> 입출고 내역</h3>
+                    <h3 class="text-base font-bold text-gray-800">🔍 <span id="logTitleMonth" class="text-blue-600"></span> 입출고·화물비 내역</h3>
                     <div class="flex sm:items-center gap-2 bg-gray-50 p-2 rounded-lg border">
                         <input type="date" id="searchDate" class="border bg-white p-1.5 text-sm rounded cursor-pointer flex-1 sm:flex-none outline-none" onchange="render()">
                         <button onclick="document.getElementById('searchDate').value=''; render()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-medium flex-1 sm:flex-none transition">전체보기</button>
@@ -223,7 +224,7 @@
     
     <div id="editLogModal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center z-50 p-3">
         <div class="bg-white p-4 sm:p-6 rounded-xl w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto">
-            <h2 class="text-lg font-bold mb-3 border-b pb-2 flex items-center gap-2">✏️ 입출고 내역 수정</h2>
+            <h2 class="text-lg font-bold mb-3 border-b pb-2 flex items-center gap-2">✏️ 입출고·화물비 내역 수정</h2>
             <input type="hidden" id="editLogIndex">
             <div class="space-y-3">
                 <div class="grid grid-cols-2 gap-2">
@@ -377,7 +378,7 @@
         function finishLoading() {
             const today = getFormattedDate();
             if (!dailyPltLog[today]) { let plt = 0; inventory.forEach(i => plt += Math.ceil(i.box / i.pltStd)); dailyPltLog[today] = plt; }
-            updateButtonText(); render(); document.getElementById('settlementOpen').disabled = false;
+            updateButtonText(); render(); document.getElementById('settlementOpen').disabled = false; document.getElementById('freightOpen').disabled = false;
         }
 
         function saveData() {
@@ -499,13 +500,13 @@
         
         function openInOutModal(type) { 
             const [year, month] = currentSelectedMonth.split('-'); 
-            document.getElementById('inOutModalTitle').innerText = type === 'IN' ? `📥 ${year}년 ${parseInt(month)}월 입고비 상세` : `🚚 ${year}년 ${parseInt(month)}월 택배/출고비 상세`; 
+            document.getElementById('inOutModalTitle').innerText = type === 'FREIGHT' ? `🚛 ${year}년 ${parseInt(month)}월 화물비 상세` : type === 'IN' ? `📥 ${year}년 ${parseInt(month)}월 입고비 상세` : `🚚 ${year}년 ${parseInt(month)}월 택배/출고비 상세`; 
             const tbody = document.getElementById('inOutModalBody'); 
-            const filtered = logs.filter(l => l.time.startsWith(currentSelectedMonth) && (type === 'IN' ? l.type.startsWith('IN') : l.type === 'OUT')); 
+            const filtered = logs.filter(l => l.time.startsWith(currentSelectedMonth) && (type === 'FREIGHT' ? isFreight(l) : type === 'IN' ? l.type.startsWith('IN') : l.type === 'OUT' && !isFreight(l))); 
             if (filtered.length === 0) { 
                 tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-500">데이터 없음</td></tr>`; 
             } else { 
-                tbody.innerHTML = filtered.map(log => `<tr class="border-b"><td class="p-2 text-xs text-gray-500">${log.time.substring(5).replace(' ','<br>')}</td><td class="p-2 text-xs font-semibold">${log.text.replace(/\[입고\] |\[40FT입고\] |\[출고일괄\] |\[출고\] /g, '')}</td><td class="p-2 text-right font-bold text-indigo-600 whitespace-nowrap">${(log.fee||0).toLocaleString()}원</td></tr>`).join(''); 
+                tbody.innerHTML = filtered.map(log => `<tr class="border-b"><td class="p-2 text-xs text-gray-500">${log.time.substring(5).replace(' ','<br>')}</td><td class="p-2 text-xs font-semibold">${escapeSlip(log.text)}${log.memo?'<p class="text-gray-500 mt-1">'+escapeSlip(log.memo)+'</p>':''}</td><td class="p-2 text-right font-bold text-indigo-600 whitespace-nowrap">${(log.fee||0).toLocaleString()}원</td></tr>`).join(''); 
             } 
             document.getElementById('inOutModal').style.display = 'flex'; 
         }
@@ -555,7 +556,7 @@
         const dispatchSelection = new Set();
         function visibleDispatches() {
             const period = document.getElementById('searchDate').value || currentSelectedMonth;
-            return logs.filter(l => l.type === 'OUT' && l.time.startsWith(period));
+            return logs.filter(l => l.type === 'OUT' && !isFreight(l) && l.time.startsWith(period));
         }
         function updateDispatchSelection() {
             const visible = new Set(visibleDispatches());
@@ -568,7 +569,7 @@
         }
         function toggleDispatchSelection(index, checked) {
             const log = logs[index];
-            if (!log || log.type !== 'OUT') return;
+            if (!log || log.type !== 'OUT' || isFreight(log)) return;
             if (checked) dispatchSelection.add(log); else dispatchSelection.delete(log);
             updateDispatchSelection();
         }
@@ -581,8 +582,8 @@
             updateDispatchSelection();
             const date = document.getElementById('searchDate').value;
             const selected = index === 'selected' ? [...dispatchSelection] : index === null
-                ? logs.filter(l => l.type === 'OUT' && l.time.startsWith(date || currentSelectedMonth))
-                : [logs[index]].filter(l => l && l.type === 'OUT');
+                ? logs.filter(l => l.type === 'OUT' && !isFreight(l) && l.time.startsWith(date || currentSelectedMonth))
+                : [logs[index]].filter(l => l && l.type === 'OUT' && !isFreight(l));
             if (!selected.length) return alert('출력할 출고 내역이 없습니다.');
             const rows = [...selected].sort((a,b) => a.time.localeCompare(b.time));
             const total = rows.reduce((sum,l) => sum + (Number(l.fee) || 0), 0);
@@ -698,7 +699,7 @@
             saveData(); 
         }
 
-        function cancelTransaction(index) { const log = logs[index]; const item = inventory.find(i => i.id === log.itemId); if(!confirm('취소하시겠습니까?')) return; const appliedBoxes = log.box + ((log.plt || 0) * item.pltStd); if (log.type.startsWith('IN')) { item.box -= appliedBoxes; item.pcs -= log.pcs; } else { item.box += appliedBoxes; item.pcs += log.pcs; } if (item.perBox > 0) { let total = (item.box * item.perBox) + item.pcs; item.box = Math.floor(total / item.perBox); item.pcs = ((total % item.perBox) + item.perBox) % item.perBox; } logs.splice(index, 1); recalcDailyPlt(getFormattedDate()); saveData(); }
+        function cancelTransaction(index) { const log = logs[index]; if(isFreight(log))return deleteFreight(index); const item = inventory.find(i => i.id === log.itemId); if(!confirm('취소하시겠습니까?')) return; const appliedBoxes = log.box + ((log.plt || 0) * item.pltStd); if (log.type.startsWith('IN')) { item.box -= appliedBoxes; item.pcs -= log.pcs; } else { item.box += appliedBoxes; item.pcs += log.pcs; } if (item.perBox > 0) { let total = (item.box * item.perBox) + item.pcs; item.box = Math.floor(total / item.perBox); item.pcs = ((total % item.perBox) + item.perBox) % item.perBox; } logs.splice(index, 1); recalcDailyPlt(getFormattedDate()); saveData(); }
         function clearHistory() { logs = []; dailyPltLog = {}; manualStorageLog = {}; recalcDailyPlt(getFormattedDate()); saveData(); alert('데이터가 초기화되었습니다.'); }
 
         // 📅 특정 날짜만 필터링 (그룹 헤더 클릭 시)
@@ -719,11 +720,12 @@
             }
         }
 
-        // ✏️ 입출고 내역 수정
+        // ✏️ 입출고·화물비 내역 수정
         let editingLogIndex = -1;
         function openEditLogModal(index) {
             const log = logs[index];
             if (!log) return;
+            if(isFreight(log))return openFreightModal(index);
             editingLogIndex = index;
             const item = inventory.find(i => i.id === log.itemId);
             document.getElementById('editLogIndex').value = index;
@@ -1034,13 +1036,15 @@
             document.getElementById('logTitleMonth').innerText = currentSelectedMonth.replace('-', '.');
 
             let mInFee = 0, mOutFee = 0, mStorageFee = 0;
+            const freightFee=logs.filter(l=>isFreight(l)&&l.time.startsWith(currentSelectedMonth)).reduce((n,l)=>n+Number(l.fee||0),0);
+            document.getElementById("monthlyFreightFee").innerText=freightFee.toLocaleString();
             
             const dailyStorage = buildDailyStorage(currentSelectedMonth);
             Object.keys(dailyStorage).forEach(d => { mStorageFee += dailyStorage[d] * 700; });
 
             logs.forEach(log => { if (log.time.startsWith(currentSelectedMonth)) { if (log.type.startsWith('IN')) mInFee += (log.fee||0); if (log.type === 'OUT') mOutFee += (log.fee||0); }});
             
-            document.getElementById('monthlyStorageFee').innerText = mStorageFee.toLocaleString(); document.getElementById('monthlyInFee').innerText = mInFee.toLocaleString(); document.getElementById('monthlyOutFee').innerText = mOutFee.toLocaleString(); document.getElementById('monthlyTotalRevenue').innerText = (mInFee + mOutFee + mStorageFee).toLocaleString();
+            document.getElementById('monthlyStorageFee').innerText = mStorageFee.toLocaleString(); document.getElementById('monthlyInFee').innerText = mInFee.toLocaleString(); document.getElementById('monthlyOutFee').innerText = (mOutFee-freightFee).toLocaleString(); document.getElementById('monthlyTotalRevenue').innerText = (mInFee + mOutFee + mStorageFee).toLocaleString();
             document.getElementById('itemSelect').innerHTML = inventory.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
 
             updateDispatchSelection();
@@ -1063,13 +1067,13 @@
 
                     const header = `<div onclick="filterByDate('${d}')" title="클릭하면 이 날짜만 보기" class="flex justify-between items-center bg-slate-800 text-white px-3 py-2 rounded-lg mb-2 cursor-pointer shadow-sm hover:bg-slate-700 transition">
                         <span class="font-bold text-sm whitespace-nowrap">📅 ${d.substring(5)}${wday?` (${wday})`:''}</span>
-                        <span class="text-[11px] text-right leading-tight">🚚 출고비 합계 <b class="text-amber-300 text-sm ml-1">${dayOut.toLocaleString()}원</b>${dayIn>0?`<br><span class="text-blue-200">📥 입고비 ${dayIn.toLocaleString()}원</span>`:''}</span>
+                        <span class="text-[11px] text-right leading-tight">🚚 출고비 합계 (화물 포함) <b class="text-amber-300 text-sm ml-1">${dayOut.toLocaleString()}원</b>${dayIn>0?`<br><span class="text-blue-200">📥 입고비 ${dayIn.toLocaleString()}원</span>`:''}</span>
                     </div>`;
 
                     const cards = dayLogs.map(log => {
                         const idx = logs.indexOf(log);
-                        const isOut = log.type === 'OUT';
-                        return `<div class="p-3 bg-white border-l-4 ${isOut?'border-blue-400':'border-green-400'} mb-2 rounded-lg shadow-sm"><div class="flex justify-between items-start gap-2"><div class="min-w-0">${isOut ? `<label class="inline-flex items-center gap-2 text-xs font-bold text-blue-800 mb-2 cursor-pointer"><input type="checkbox" class="w-4 h-4" ${dispatchSelection.has(log) ? 'checked' : ''} onchange="toggleDispatchSelection(${idx}, this.checked)"> 묶음 출고증에 포함</label>` : ''}<p class="${isOut?'text-blue-700':'text-green-700'} font-bold text-sm break-words">${log.text}</p><p class="text-[11px] text-gray-500 mt-1 font-mono">${log.time} <span class="text-indigo-600 font-bold ml-1 border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 rounded-sm">💰 ${(log.fee||0).toLocaleString()}원</span></p></div><div class="flex gap-1 shrink-0">${isOut ? `<button onclick="openDispatchSlip(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-blue-50 text-blue-700 font-bold">출고증</button>` : ''}<button onclick="openEditLogModal(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-blue-500 hover:text-white text-gray-600 font-bold transition h-fit shadow-sm">수정</button><button onclick="cancelTransaction(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-red-500 hover:text-white text-gray-500 font-bold transition h-fit shadow-sm">삭제</button></div></div>${log.memo ? `<p class="text-[11px] text-gray-600 mt-2 bg-gray-50 p-2 rounded border font-medium">📝 ${log.memo}</p>` : ''}</div>`;
+                        const isOut = log.type === 'OUT' && !isFreight(log);
+                        return `<div class="p-3 bg-white border-l-4 ${isOut?'border-blue-400':'border-green-400'} mb-2 rounded-lg shadow-sm"><div class="flex justify-between items-start gap-2"><div class="min-w-0">${isOut ? `<label class="inline-flex items-center gap-2 text-xs font-bold text-blue-800 mb-2 cursor-pointer"><input type="checkbox" class="w-4 h-4" ${dispatchSelection.has(log) ? 'checked' : ''} onchange="toggleDispatchSelection(${idx}, this.checked)"> 묶음 출고증에 포함</label>` : ''}<p class="${isOut?'text-blue-700':'text-green-700'} font-bold text-sm break-words">${escapeSlip(log.text)}</p><p class="text-[11px] text-gray-500 mt-1 font-mono">${log.time} <span class="text-indigo-600 font-bold ml-1 border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 rounded-sm">💰 ${(log.fee||0).toLocaleString()}원</span></p></div><div class="flex gap-1 shrink-0">${isOut ? `<button onclick="openDispatchSlip(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-blue-50 text-blue-700 font-bold">출고증</button>` : ''}<button onclick="openEditLogModal(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-blue-500 hover:text-white text-gray-600 font-bold transition h-fit shadow-sm">수정</button><button onclick="cancelTransaction(${idx})" class="text-[11px] border px-2 py-1.5 rounded bg-gray-50 hover:bg-red-500 hover:text-white text-gray-500 font-bold transition h-fit shadow-sm">삭제</button></div></div>${log.memo ? `<p class="text-[11px] text-gray-600 mt-2 bg-gray-50 p-2 rounded border font-medium">📝 ${escapeSlip(log.memo)}</p>` : ''}</div>`;
                     }).join('');
 
                     return `<div class="mb-3">${header}${cards}</div>`;
@@ -1160,8 +1164,10 @@ function buildSettlement(month){
   const fee=Number(log.fee??0);if(!Number.isFinite(fee))throw Error(date+'의 작업 금액을 확인해 주세요.');
   if(incoming){row.inFee+=fee;entryCounts.IN++}else{row.outFee+=fee;entryCounts.OUT++}
  }
+ const freightLogs=logs.filter(l=>isFreight(l)&&l.time.startsWith(month));
+ const freightFee=freightLogs.reduce((n,l)=>n+Number(l.fee||0),0);
  const days=[...daily.values()];
- const result={month,first,end,days,entryCounts,storage:0,inFee:0,outFee:0,pltDays:0};
+ const result={month,first,end,days,entryCounts,freightFee,freightCount:freightLogs.length,storage:0,inFee:0,outFee:0,pltDays:0};
  days.forEach(d=>{result.storage+=d.storage;result.inFee+=d.inFee;result.outFee+=d.outFee;result.pltDays+=d.plt});
  result.supply=result.storage+result.inFee+result.outFee;result.vat=Math.round(result.supply*.1);result.total=result.supply+result.vat;
  if(![result.storage,result.inFee,result.outFee,result.supply,result.vat,result.total].every(Number.isSafeInteger))throw Error('정산 금액의 숫자 형식을 확인해 주세요.');
@@ -1183,15 +1189,15 @@ function renderSettlement(){
  const r=settlementSnapshot;if(!r)return;
  const issuer=document.getElementById('statementIssuer').value.trim()||'TS3PL',issueDate=document.getElementById('statementIssueDate').value;
  const memo=document.getElementById('statementMemo').value.trim(),details=document.getElementById('statementDetails').checked;
- const lines=[['보관료',statementMoney(r.pltDays)+' PLT·일 × 700원',r.storage],['입고비','입고 작업 '+r.entryCounts.IN+'개 기록 · 등록 금액 합계',r.inFee],['출고비','출고 작업 '+r.entryCounts.OUT+'개 기록 · 등록 금액 합계',r.outFee]];
+ const lines=[['보관료',statementMoney(r.pltDays)+' PLT·일 × 700원',r.storage],['입고비','입고 작업 '+r.entryCounts.IN+'개 기록 · 등록 금액 합계',r.inFee],['출고비','출고 작업 '+(r.entryCounts.OUT-r.freightCount)+'개 기록 · 등록 금액 합계',r.outFee-r.freightFee],['화물비','별도 운송비 '+r.freightCount+'개 기록 · 등록 금액 합계',r.freightFee]];
  document.getElementById('settlementPaper').innerHTML=`<div class="statement-head"><div><p class="statement-kicker">MONTHLY LOGISTICS STATEMENT</p><h1>물류비 정산서</h1><p>${statementEscape(r.month.replace('-','년 '))}월 정산</p></div><div class="statement-meta">문서번호 ${SETTLEMENT_CODE}-${r.month.replace('-','')}<br>발행일 ${statementEscape(issueDate||'미입력')}<br>정산 기간 ${r.first} ~ ${r.end}</div></div>
  <div class="statement-parties"><div><p class="statement-label">수신</p><p class="statement-party">${SETTLEMENT_CLIENT} 귀중</p></div><div><p class="statement-label">발행</p><p class="statement-party">${statementEscape(issuer)}</p></div></div>
  <div class="statement-amount"><span>청구 합계 <small>(부가세 포함)</small></span><strong>${statementMoney(r.total)}원</strong></div>
  <table><colgroup><col style="width:20%"><col style="width:51%"><col style="width:29%"></colgroup><thead><tr><th>항목</th><th>산출 내역</th><th class="num">금액 (원)</th></tr></thead><tbody>${lines.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td class="num">${statementMoney(x[2])}</td></tr>`).join('')}</tbody></table>
  <div class="statement-sums"><div><span>공급가액</span><strong>${statementMoney(r.supply)}원</strong></div><div><span>부가세 (10%)</span><strong>${statementMoney(r.vat)}원</strong></div><div><span>청구 합계</span><strong>${statementMoney(r.total)}원</strong></div></div>
  ${memo?'<div class="statement-note">'+statementEscape(memo)+'</div>':''}
- <p class="statement-foot">보관료는 기존 정산 화면의 일별 청구 수량(수동 조정 포함)을 적용합니다.<br>입고비·출고비는 선택 월에 등록된 작업 금액을 합산합니다. 부가세는 공급가액 합계의 10%를 원 단위 반올림합니다.<br>본 문서는 물류비 정산 내역서입니다.</p>
- ${details?`<section class="statement-detail"><h2>일별 정산 내역 · ${SETTLEMENT_CLIENT}</h2><p>${r.first} ~ ${r.end} / 금액 단위: 원, 부가세 별도</p><table><colgroup><col style="width:22%"><col style="width:14%"><col style="width:20%"><col style="width:20%"><col style="width:24%"></colgroup><thead><tr><th>일자</th><th class="num">청구 PLT</th><th class="num">보관료</th><th class="num">입고비</th><th class="num">출고비</th></tr></thead><tbody>${r.days.map(d=>`<tr><td>${d.date}${d.manual?' *':''}</td><td class="num">${statementMoney(d.plt)}</td><td class="num">${statementMoney(d.storage)}</td><td class="num">${statementMoney(d.inFee)}</td><td class="num">${statementMoney(d.outFee)}</td></tr>`).join('')}<tr><th>합계</th><th class="num">${statementMoney(r.pltDays)} PLT·일</th><th class="num">${statementMoney(r.storage)}</th><th class="num">${statementMoney(r.inFee)}</th><th class="num">${statementMoney(r.outFee)}</th></tr></tbody></table>${r.days.some(d=>d.manual)?'<p class="statement-foot">* 표시는 보관 수량을 수동 조정한 일자입니다.</p>':''}</section>`:''}`;
+ <p class="statement-foot">보관료는 기존 정산 화면의 일별 청구 수량(수동 조정 포함)을 적용합니다.<br>입고비·출고비·화물비는 선택 월에 등록된 작업 금액을 합산합니다. 부가세는 공급가액 합계의 10%를 원 단위 반올림합니다.<br>본 문서는 물류비 정산 내역서입니다.</p>
+ ${details?`<section class="statement-detail"><h2>일별 정산 내역 · ${SETTLEMENT_CLIENT}</h2><p>${r.first} ~ ${r.end} / 금액 단위: 원, 부가세 별도</p><table><colgroup><col style="width:22%"><col style="width:14%"><col style="width:20%"><col style="width:20%"><col style="width:24%"></colgroup><thead><tr><th>일자</th><th class="num">청구 PLT</th><th class="num">보관료</th><th class="num">입고비</th><th class="num">출고비<br>(화물 포함)</th></tr></thead><tbody>${r.days.map(d=>`<tr><td>${d.date}${d.manual?' *':''}</td><td class="num">${statementMoney(d.plt)}</td><td class="num">${statementMoney(d.storage)}</td><td class="num">${statementMoney(d.inFee)}</td><td class="num">${statementMoney(d.outFee)}</td></tr>`).join('')}<tr><th>합계</th><th class="num">${statementMoney(r.pltDays)} PLT·일</th><th class="num">${statementMoney(r.storage)}</th><th class="num">${statementMoney(r.inFee)}</th><th class="num">${statementMoney(r.outFee)}</th></tr></tbody></table>${r.days.some(d=>d.manual)?'<p class="statement-foot">* 표시는 보관 수량을 수동 조정한 일자입니다.</p>':''}</section>`:''}`;
 }
 function printSettlement(){
  if(!settlementSnapshot)return;
@@ -1203,6 +1209,94 @@ window.addEventListener('afterprint',()=>{if(settlementPreviousTitle)document.ti
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('settlementModal').hidden)closeSettlement()});
 </script>
 
+<style>#freightModal[hidden]{display:none!important}#freightModal{position:fixed;inset:0;z-index:120;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}#freightModal input,#freightModal textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px}#freightModal label{display:block;font-weight:bold;margin:14px 0 5px}#freightModal button:disabled{opacity:.5}</style>
+<div id="freightModal" role="dialog" aria-modal="true" aria-labelledby="freightTitle" hidden>
+ <form class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onsubmit="event.preventDefault();saveFreight()">
+ <h2 id="freightTitle" class="text-xl font-bold text-blue-900">화물비 추가</h2>
+ <p class="text-sm text-gray-500 mt-2">재고 변동 없이 화물비만 정산에 추가합니다.</p>
+ <label for="freightDate">작업일</label><input id="freightDate" type="date" required>
+ <label for="freightAmount">화물비 (원 · 부가세 별도)</label><input id="freightAmount" type="number" min="1" step="1" inputmode="numeric" placeholder="예: 50000" required>
+ <label for="freightMemo">메모 (선택)</label><textarea id="freightMemo" rows="3" maxlength="500" placeholder="운송 구간, 차량, 추가 비용 사유 등"></textarea>
+ <p class="text-xs text-gray-500 mt-2">저장한 금액과 메모는 게스트 화면에서도 조회됩니다.</p>
+ <p id="freightError" role="alert" class="text-sm text-red-600 mt-3"></p>
+ <div class="flex justify-end gap-2 mt-5"><button type="button" id="freightClose" onclick="closeFreightModal()" class="border rounded-md px-4 py-2">닫기</button><button type="submit" id="freightSave" class="bg-blue-700 text-white font-bold rounded-md px-4 py-2">저장</button></div>
+ </form>
+</div>
+
+<script>
+let freightEditingId=null,freightExpected=null,freightSaving=false,freightDraftId=null;
+function isFreight(log){return log?.originalType==='FREIGHT'}
+function freightSignature(log){return JSON.stringify(Object.keys(log).sort().map(k=>[k,log[k]]))}
+function openFreightModal(index=null){
+ if(freightSaving)return;
+ const log=index===null?null:logs[index];
+ if(log&&!isFreight(log))return;
+ freightEditingId=log?.id||null;freightExpected=log?freightSignature(log):null;freightDraftId=log?.id||crypto.randomUUID();
+ document.getElementById('freightTitle').textContent=log?'화물비 수정':'화물비 추가';
+ document.getElementById('freightDate').value=log?log.time.slice(0,10):getFormattedDate();
+ document.getElementById('freightDate').max=getFormattedDate();
+ document.getElementById('freightAmount').value=log?log.fee:'';
+ document.getElementById('freightMemo').value=log?.memo||'';
+ document.getElementById('freightError').textContent='';
+ document.getElementById('freightModal').hidden=false;
+ document.getElementById('freightAmount').focus();
+}
+function closeFreightModal(){if(freightSaving)return;document.getElementById('freightModal').hidden=true;document.getElementById('freightOpen').focus()}
+function freightInput(){
+ const date=document.getElementById('freightDate').value,raw=document.getElementById('freightAmount').value,fee=Number(raw),memo=document.getElementById('freightMemo').value.trim();
+ const parsed=new Date(date+'T12:00:00');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||isNaN(parsed)||getFormattedDate(parsed)!==date||date>getFormattedDate())throw Error('오늘까지의 올바른 작업일을 선택해 주세요.');
+ if(!raw.trim()||!Number.isSafeInteger(fee)||fee<=0)throw Error('화물비는 1원 이상의 정수로 입력해 주세요.');
+ if(memo.length>500)throw Error('메모는 500자 이내로 입력해 주세요.');
+ return {date,fee,memo};
+}
+async function persistFreight(operation){
+ if(freightSaving)return false;
+ freightSaving=true;document.getElementById('freightSave').disabled=true;document.getElementById('freightClose').disabled=true;
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+ try{
+  // Merge only this freight entry into the latest server snapshot. Never send a stale inventory.
+  const response=await fetch(FIREBASE_URL,{cache:'no-store',headers:{'X-Firebase-ETag':'true'},signal:controller.signal});
+  if(!response.ok)throw Error('서버 자료를 불러오지 못했습니다. 다시 시도해 주세요.');
+  const etag=response.headers.get('ETag'),data=await response.json();
+  if(!etag||!data||typeof data!=='object'||Array.isArray(data)||data.error)throw Error('서버 연결을 확인한 뒤 다시 시도해 주세요.');
+  if(data.logs!=null&&!Array.isArray(data.logs))throw Error('서버 내역 형식을 확인해 주세요.');
+  const latest=(data.logs||[]).filter(Boolean);
+  if(operation.kind==='add'){
+   if(!latest.some(l=>l.id===operation.log.id))latest.unshift(operation.log);
+  }else{
+   const index=latest.findIndex(l=>l.id===operation.id&&isFreight(l));
+   if(index<0||freightSignature(latest[index])!==operation.expected)throw Error('이 화물비가 다른 화면에서 변경되었습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.');
+   if(operation.kind==='delete')latest.splice(index,1);else latest[index]={...latest[index],...operation.log};
+  }
+  data.logs=latest;
+  const saved=await fetch(FIREBASE_URL,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(data),signal:controller.signal});
+  if(saved.status===412)throw Error('다른 작업이 먼저 저장되었습니다. 다시 저장해 주세요.');
+  if(!saved.ok)throw Error('화물비를 저장하지 못했습니다. 연결 상태를 확인해 주세요.');
+  inventory=data.inventory||inventory;logs=latest;dailyPltLog=data.dailyPltLog||{};manualStorageLog=data.manualStorageLog||{};productMap=data.productMap||productMap;
+  if(operation.log){currentSelectedMonth=operation.log.time.slice(0,7);document.getElementById('searchDate').value=''}
+  finishLoading();document.getElementById('cloudStatus').innerText='🟢 화물비 저장 완료 · 게스트 화면에 자동 반영됩니다';
+  return true;
+ }finally{clearTimeout(timeout);freightSaving=false;document.getElementById('freightSave').disabled=false;document.getElementById('freightClose').disabled=false}
+}
+async function saveFreight(){
+ if(freightSaving)return;
+ const error=document.getElementById('freightError');error.textContent='';
+ try{
+  const {date,fee,memo}=freightInput();
+  // Keep OUT for compatibility with the integrated settlement dashboard; quantities stay zero.
+  const log={id:freightEditingId||freightDraftId,type:'OUT',originalType:'FREIGHT',itemId:'',itemName:'화물비',plt:0,box:0,pcs:0,fee,text:'[화물비] 별도 운송비',memo,time:date+' 12:00'};
+  if(await persistFreight({kind:freightEditingId?'edit':'add',id:freightEditingId,expected:freightExpected,log}))closeFreightModal();
+ }catch(e){error.textContent=e.name==='AbortError'?'응답 시간이 초과되었습니다. 새로고침하여 저장 여부를 확인해 주세요.':e.message}
+}
+async function deleteFreight(index){
+ if(freightSaving)return;const log=logs[index];if(!isFreight(log)||!confirm('이 화물비 내역을 삭제하시겠습니까?'))return;
+ try{await persistFreight({kind:'delete',id:log.id,expected:freightSignature(log)})}catch(e){alert(e.name==='AbortError'?'응답 시간이 초과되었습니다. 새로고침하여 내역을 확인해 주세요.':e.message)}
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('freightModal').hidden)closeFreightModal()});
+
+</script>
 </body>
 </html>
+
 

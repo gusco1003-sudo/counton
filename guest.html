@@ -32,7 +32,7 @@
                     <h3 class="text-xs sm:text-sm font-semibold text-blue-200 mb-1">선택한 월 정산 금액 (부가세 별도)</h3>
                     <div class="text-3xl sm:text-4xl font-extrabold leading-tight"><span id="monthlyTotalRevenue">—</span> <span class="text-base sm:text-xl font-normal opacity-80">원</span></div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 bg-black bg-opacity-20 p-3 sm:p-4 rounded-lg">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-3 bg-black bg-opacity-20 p-3 sm:p-4 rounded-lg">
                     <button type="button" id="viewStorage" onclick="openStorageModal()" class="flex justify-between sm:block items-center cursor-pointer hover:bg-black hover:bg-opacity-10 p-1.5 rounded-lg transition" title="클릭하시면 상세 일별 보관 내역을 보실 수 있습니다.">
                         <p class="text-xs text-blue-200 mb-0 sm:mb-1">📦 보관료 (700원/PLT·일) <span class="text-white ml-1">🔍</span></p>
                         <p class="text-base sm:text-lg font-bold"><span id="monthlyStorageFee">—</span> 원</p>
@@ -45,6 +45,7 @@
                         <p class="text-xs text-blue-200 mb-0 sm:mb-1">📥 입고비 <span class="text-white ml-1">🔍</span></p>
                         <p class="text-base sm:text-lg font-bold"><span id="monthlyInFee">—</span> 원</p>
                     </button>
+<button type="button" id="viewFreight" onclick="openInOutModal('FREIGHT')" class="flex justify-between sm:block items-center p-1.5 rounded-lg hover:bg-black hover:bg-opacity-10"><p class="text-xs text-blue-200 mb-1">🚛 화물비 🔍</p><p class="text-base sm:text-lg font-bold"><span id="monthlyFreightFee">0</span> 원</p></button>
                 </div>
             </div>
 
@@ -64,13 +65,13 @@
 
             <div>
                 <div class="flex flex-col gap-2 mb-3">
-                    <h3 class="text-base font-bold text-gray-800">🔍 <span id="logTitleMonth" class="text-blue-600"></span> 입출고 내역</h3>
+                    <h3 class="text-base font-bold text-gray-800">🔍 <span id="logTitleMonth" class="text-blue-600"></span> 입출고·화물비 내역</h3>
                     <div class="flex flex-wrap sm:items-center gap-2 bg-gray-50 p-2 rounded-lg border">
                         <input type="date" id="searchDate" aria-label="조회일" class="border bg-white p-1.5 text-sm rounded cursor-pointer flex-1 sm:flex-none outline-none" onchange="handleDateChange()">
                         <button onclick="resetHistoryFilters()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-medium flex-1 sm:flex-none transition">조건 초기화</button>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-2 mb-3"><select id="historyType" aria-label="입출고 구분" onchange="renderLogs()" class="border p-2 rounded-lg"><option value="ALL">입출고 전체</option><option value="IN">입고</option><option value="OUT">출고</option></select><input type="search" id="historySearch" aria-label="내역 검색" oninput="renderLogs()" placeholder="품목·메모 검색" class="border p-2 rounded-lg flex-1 min-w-0"><span id="historyCount" class="text-xs text-gray-500"></span></div><div id="logContainer" class="bg-gray-50 p-2 sm:p-4 rounded-lg max-h-80 overflow-y-auto text-sm text-gray-600 border shadow-inner"></div>
+                <div class="flex flex-wrap items-center gap-2 mb-3"><select id="historyType" aria-label="입출고 구분" onchange="renderLogs()" class="border p-2 rounded-lg"><option value="ALL">전체 내역</option><option value="IN">입고</option><option value="OUT">출고</option><option value="FREIGHT">화물비</option></select><input type="search" id="historySearch" aria-label="내역 검색" oninput="renderLogs()" placeholder="품목·메모 검색" class="border p-2 rounded-lg flex-1 min-w-0"><span id="historyCount" class="text-xs text-gray-500"></span></div><div id="logContainer" class="bg-gray-50 p-2 sm:p-4 rounded-lg max-h-80 overflow-y-auto text-sm text-gray-600 border shadow-inner"></div>
             </div>
         </div>
     </div>
@@ -213,12 +214,14 @@ async function fetchData(){
  }finally{clearTimeout(timer);fetching=false;$('refreshGuest').disabled=false}
 }
 function isInbound(l){return l.type.startsWith('IN')}
+function isFreight(l){return l.originalType==='FREIGHT'}
 function monthlyTotals(){
  const series=buildDailyStorage(currentSelectedMonth);
  let storage=0,inFee=0,outFee=0;
  Object.values(series).forEach(n=>storage+=Number(n||0)*700);
  logs.forEach(l=>{if(l.time.startsWith(currentSelectedMonth)){if(isInbound(l))inFee+=l.fee;if(l.type==='OUT')outFee+=l.fee}});
- return {series,storage,inFee,outFee,total:storage+inFee+outFee};
+ const freightFee=logs.filter(l=>isFreight(l)&&l.time.startsWith(currentSelectedMonth)).reduce((n,l)=>n+l.fee,0);
+ return {series,storage,inFee,outFee,freightFee,total:storage+inFee+outFee};
 }
 function visibleInventory(){return inventory.filter(i=>!IS_LUNOX||i.id!=='in_40ft')}
 function renderInventory(){
@@ -232,17 +235,17 @@ function renderInventory(){
 }
 function filteredLogs(){
  const date=$('searchDate').value,type=$('historyType').value,query=$('historySearch').value.trim().toLowerCase();
- return logs.filter(l=>l.time.startsWith(date||currentSelectedMonth)&&(type==='ALL'||(type==='IN'?isInbound(l):l.type==='OUT'))&&[l.text,l.memo,l.itemName,inventory.find(i=>i.id===l.itemId)?.name].some(v=>String(v??'').toLowerCase().includes(query))).sort((a,b)=>b.time.localeCompare(a.time));
+ return logs.filter(l=>l.time.startsWith(date||currentSelectedMonth)&&(type==='ALL'||(type==='FREIGHT'?isFreight(l):type==='IN'?isInbound(l):l.type==='OUT'&&!isFreight(l)))&&[l.text,l.memo,l.itemName,inventory.find(i=>i.id===l.itemId)?.name].some(v=>String(v??'').toLowerCase().includes(query))).sort((a,b)=>b.time.localeCompare(a.time));
 }
 function renderLogs(){
  const rows=filteredLogs(),groups=new Map();rows.forEach(l=>{const day=l.time.slice(0,10);if(!groups.has(day))groups.set(day,[]);groups.get(day).push(l)});
  $('logTitleMonth').textContent=currentSelectedMonth.replace('-','.');$('historyCount').textContent=fmt(rows.length)+'개 기록';
- $('logContainer').innerHTML=[...groups].map(([day,records])=>`<section class="mb-4"><h4 class="bg-slate-800 text-white rounded-lg p-2 font-bold">${escapeText(day)} <span class="font-normal text-xs ml-2">입고비 ${fmt(records.filter(isInbound).reduce((n,l)=>n+l.fee,0))}원 · 출고비 ${fmt(records.filter(l=>l.type==='OUT').reduce((n,l)=>n+l.fee,0))}원</span></h4>${records.map(l=>`<article class="p-3 bg-white border-l-4 ${l.type==='OUT'?'border-blue-400':'border-green-400'} rounded shadow-sm mt-2"><div class="flex justify-between gap-3"><p class="font-bold break-words min-w-0">${escapeText(l.text||l.itemName||inventory.find(i=>i.id===l.itemId)?.name||l.type)}</p><strong class="text-indigo-700 whitespace-nowrap">${fmt(l.fee)}원</strong></div><p class="text-xs text-gray-500 mt-1">${escapeText(l.time)}</p>${l.memo?'<p class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 border rounded whitespace-pre-wrap break-words">'+escapeText(l.memo)+'</p>':''}</article>`).join('')}</section>`).join('')||'<div class="p-6 text-center text-gray-500">조건에 맞는 내역이 없습니다.</div>';
+ $('logContainer').innerHTML=[...groups].map(([day,records])=>`<section class="mb-4"><h4 class="bg-slate-800 text-white rounded-lg p-2 font-bold">${escapeText(day)} <span class="font-normal text-xs ml-2">입고비 ${fmt(records.filter(isInbound).reduce((n,l)=>n+l.fee,0))}원 · 출고비(화물 포함) ${fmt(records.filter(l=>l.type==='OUT').reduce((n,l)=>n+l.fee,0))}원</span></h4>${records.map(l=>`<article class="p-3 bg-white border-l-4 ${l.type==='OUT'?'border-blue-400':'border-green-400'} rounded shadow-sm mt-2"><div class="flex justify-between gap-3"><p class="font-bold break-words min-w-0">${escapeText(l.text||l.itemName||inventory.find(i=>i.id===l.itemId)?.name||l.type)}</p><strong class="text-indigo-700 whitespace-nowrap">${fmt(l.fee)}원</strong></div><p class="text-xs text-gray-500 mt-1">${escapeText(l.time)}</p>${l.memo?'<p class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 border rounded whitespace-pre-wrap break-words">'+escapeText(l.memo)+'</p>':''}</article>`).join('')}</section>`).join('')||'<div class="p-6 text-center text-gray-500">조건에 맞는 내역이 없습니다.</div>';
 }
 function render(){
  const months=new Set([getFormattedDate().slice(0,7),currentSelectedMonth]);logs.forEach(l=>months.add(l.time.slice(0,7)));Object.keys(dailyPltLog).forEach(d=>months.add(d.slice(0,7)));Object.keys(manualStorageLog).forEach(d=>months.add(d.slice(0,7)));
  $('monthSelector').innerHTML=[...months].sort().reverse().map(m=>`<option value="${m}" ${m===currentSelectedMonth?'selected':''}>${m.replace('-','년 ')}월 내역</option>`).join('');
- const t=monthlyTotals();$('monthlyTotalRevenue').textContent=fmt(t.total);$('monthlyStorageFee').textContent=fmt(t.storage);$('monthlyInFee').textContent=fmt(t.inFee);$('monthlyOutFee').textContent=fmt(t.outFee);
+ const t=monthlyTotals();$('monthlyTotalRevenue').textContent=fmt(t.total);$('monthlyStorageFee').textContent=fmt(t.storage);$('monthlyInFee').textContent=fmt(t.inFee);$('monthlyOutFee').textContent=fmt(t.outFee-t.freightFee);$('monthlyFreightFee').textContent=fmt(t.freightFee);
  renderInventory();renderLogs();if(activeDetail)renderDetail();
 }
 function handleMonthChange(){currentSelectedMonth=$('monthSelector').value;$('searchDate').value='';render()}
@@ -251,15 +254,15 @@ function resetHistoryFilters(){$('searchDate').value='';$('historyType').value='
 function openStorageModal(){if(!loaded)return;activeDetail='STORAGE';renderDetail();$('storageModal').style.display='flex';$('storageClose').focus()}
 function closeStorageModal(){$('storageModal').style.display='none';activeDetail=null;$('viewStorage').focus()}
 function openInOutModal(type){if(!loaded)return;activeDetail=type;renderDetail();$('inOutModal').style.display='flex';$('inOutClose').focus()}
-function closeInOutModal(){const previous=activeDetail;$('inOutModal').style.display='none';activeDetail=null;$(previous==='IN'?'viewIn':'viewOut').focus()}
+function closeInOutModal(){const previous=activeDetail;$('inOutModal').style.display='none';activeDetail=null;$(previous==='FREIGHT'?'viewFreight':previous==='IN'?'viewIn':'viewOut').focus()}
 function renderDetail(){
  if(activeDetail==='STORAGE'){
   $('storageModalTitle').textContent=currentSelectedMonth+' 보관료 상세';const t=monthlyTotals();
   $('storageModalBody').innerHTML=Object.entries(t.series).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,plt])=>`<tr class="border-b"><td class="p-2">${date}${manualStorageLog[date]!==undefined?' <small class="text-amber-700">조정</small>':''}</td><td class="p-2 text-center">${fmt(plt)} PLT</td><td class="p-2 text-right">${fmt(plt*700)}원</td></tr>`).join('')||'<tr><td colspan="3" class="p-4 text-center">내역 없음</td></tr>';
  }else{
-  $('inOutModalTitle').textContent=currentSelectedMonth+(activeDetail==='IN'?' 입고비 상세':' 출고비 상세');
-  const rows=logs.filter(l=>l.time.startsWith(currentSelectedMonth)&&(activeDetail==='IN'?isInbound(l):l.type==='OUT')).sort((a,b)=>b.time.localeCompare(a.time));
-  $('inOutModalBody').innerHTML=rows.map(l=>`<tr class="border-b"><td class="p-2 text-xs">${escapeText(l.time)}</td><td class="p-2 text-xs">${escapeText(l.text||l.itemName||l.type)}</td><td class="p-2 text-right whitespace-nowrap">${fmt(l.fee)}원</td></tr>`).join('')||'<tr><td colspan="3" class="p-4 text-center">내역 없음</td></tr>';
+  $('inOutModalTitle').textContent=currentSelectedMonth+(activeDetail==='FREIGHT'?' 화물비 상세':activeDetail==='IN'?' 입고비 상세':' 출고비 상세');
+  const rows=logs.filter(l=>l.time.startsWith(currentSelectedMonth)&&(activeDetail==='FREIGHT'?isFreight(l):activeDetail==='IN'?isInbound(l):l.type==='OUT'&&!isFreight(l))).sort((a,b)=>b.time.localeCompare(a.time));
+  $('inOutModalBody').innerHTML=rows.map(l=>`<tr class="border-b"><td class="p-2 text-xs">${escapeText(l.time)}</td><td class="p-2 text-xs">${escapeText(l.text||l.itemName||l.type)}${l.memo?'<p class="text-gray-500 mt-1 whitespace-pre-wrap">'+escapeText(l.memo)+'</p>':''}</td><td class="p-2 text-right whitespace-nowrap">${fmt(l.fee)}원</td></tr>`).join('')||'<tr><td colspan="3" class="p-4 text-center">내역 없음</td></tr>';
  }
 }
 document.addEventListener('DOMContentLoaded',()=>{fetchData();setInterval(()=>{if(!document.hidden)fetchData()},15000)});
